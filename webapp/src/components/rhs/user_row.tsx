@@ -8,8 +8,8 @@ import {UserProfile} from 'mattermost-redux/types/users';
 import {Ownership} from '../../types/badges';
 
 type Props = {
-    ownership: Ownership,
-    onClick: (user: string) => void
+    ownership: Ownership;
+    onClick: (user: string) => void;
 }
 
 const UserBadgeRow: React.FC<Props> = ({ownership, onClick}: Props) => {

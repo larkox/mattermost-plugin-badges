@@ -1,5 +1,4 @@
-import {UserProfile} from 'mattermost-redux/types/users';
-import { BadgeID } from './badges';
+import {BadgeID} from './badges';
 
 export type RHSState = string;
 

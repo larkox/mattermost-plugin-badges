@@ -9,15 +9,17 @@ import {RHSState} from '../../types/general';
 import {RHS_STATE_MY, RHS_STATE_OTHER} from '../../constants';
 import BadgeImage from '../utils/badge_image';
 
+import {markdown} from 'utils/markdown';
+
 import UserRow from './user_row';
 
 type Props = {
-    badgeID: BadgeID | null,
-    currentUserID: string,
+    badgeID: BadgeID | null;
+    currentUserID: string;
     actions: {
-        setRHSView: (view: RHSState) => void
-        setRHSUser: (user: string | null) => void
-    }
+        setRHSView: (view: RHSState) => void;
+        setRHSUser: (user: string | null) => void;
+    };
 }
 
 type State = {
@@ -62,7 +64,7 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
         if (this.props.badgeID === null) {
             return;
         }
-        
+
         const c = new Client();
         c.getBadgeDetails(this.props.badgeID).then((badge) => {
             this.setState({badge, loading: false});
@@ -76,7 +78,6 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
         }
 
         if (this.props.badgeID === null) {
-            this.setState({badge: null});
             return;
         }
 
@@ -91,7 +92,7 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
             this.props.actions.setRHSView(RHS_STATE_MY);
             return;
         }
-        
+
         this.props.actions.setRHSUser(user);
         this.props.actions.setRHSView(RHS_STATE_OTHER);
     }
@@ -110,7 +111,6 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
             return (<div>{'Badge not found.'}</div>);
         }
 
-        const row: React.ReactNode[] = [];
         const content = badge.owners.map((ownership) => {
             return (
                 <UserRow
@@ -131,7 +131,7 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
                         />
                     </span>
                     <div>{badge.name}</div>
-                    <div>{badge.description}</div>
+                    <div>{markdown(badge.description)}</div>
                     <div>{`Created by: ${badge.created_by_username}`}</div>
                 </div>
                 <div><b>{'Granted to:'}</b></div>

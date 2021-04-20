@@ -12,9 +12,6 @@ const (
 	ImageTypeRelativeURL ImageType = "rel_url"
 	ImageTypeAbsoluteURL ImageType = "abs_url"
 
-	BadgeTypeManual BadgeType = 0
-	BadgeTypePlugin BadgeType = 1
-
 	AutocompletePath                 = "/autocomplete"
 	AutocompletePathBadgeSuggestions = "/getBadgeSuggestions"
 	AutocompletePathTypeSuggestions  = "/getBadgeTypeSuggestions"

@@ -63,11 +63,11 @@ func (s *store) AddBadge(b Badge) (*Badge, error) {
 
 	t := badgeTypes.GetType(b.Type)
 	if t == nil {
-		return nil, errors.New("Missing badge type")
+		return nil, errors.New("missing badge type")
 	}
 
 	if !canCreateBadge(*u, *t) {
-		return nil, errors.New("You have no permission to create this type of badge")
+		return nil, errors.New("you have no permission to create this type of badge")
 	}
 
 	badgeList, err := s.getAllBadges()
@@ -102,7 +102,7 @@ func (s *store) AddType(t BadgeTypeDefinition) (*BadgeTypeDefinition, error) {
 	}
 
 	if !canCreateType(*u) {
-		return nil, errors.New("You have no permission to create this badge type")
+		return nil, errors.New("you have no permission to create this badge type")
 	}
 
 	badgeTypes, err := s.getAllTypes()
@@ -146,14 +146,14 @@ func (s *store) GetAllBadges() ([]AllBadgesBadge, error) {
 		badge := AllBadgesBadge{
 			Badge: b,
 		}
-		granted_to := map[string]bool{}
+		grantedTo := map[string]bool{}
 		for _, o := range ownership {
 			if o.Badge == badge.ID {
-				badge.GrantedTimes += 1
+				badge.GrantedTimes++
 			}
-			if !granted_to[o.User] {
-				badge.Granted += 1
-				granted_to[o.User] = true
+			if !grantedTo[o.User] {
+				badge.Granted++
+				grantedTo[o.User] = true
 			}
 		}
 		out = append(out, badge)
@@ -307,7 +307,7 @@ func (s *store) GrantBadge(id BadgeID, userID string, grantedBy string) error {
 
 	badgeType := types.GetType(badge.Type)
 	if badgeType == nil {
-		return errors.New("Badge type not found")
+		return errors.New("badge type not found")
 	}
 
 	user, appErr := s.api.GetUser(userID)
@@ -315,8 +315,13 @@ func (s *store) GrantBadge(id BadgeID, userID string, grantedBy string) error {
 		return err
 	}
 
-	if !canGrantBadge(*user, *badge, *badgeType) {
-		return errors.New("You don't have permission to grant this badge")
+	grantedByUser, appErr := s.api.GetUser(grantedBy)
+	if appErr != nil {
+		return err
+	}
+
+	if !canGrantBadge(*grantedByUser, *badge, *badgeType) {
+		return errors.New("you don't have permission to grant this badge")
 	}
 
 	ownership, err := s.getOwnershipList()
@@ -330,9 +335,9 @@ func (s *store) GrantBadge(id BadgeID, userID string, grantedBy string) error {
 
 	ownership = append(ownership, Ownership{
 		User:      user.Id,
-		Badge:     id,
+		Badge:     badge.ID,
 		Time:      time.Now(),
-		GrantedBy: grantedBy,
+		GrantedBy: grantedByUser.Id,
 	})
 
 	data, err := json.Marshal(ownership)
@@ -387,9 +392,9 @@ func (s *store) GetUserBadges(userID string) ([]UserBadge, error) {
 	return out, nil
 }
 
-func (s *store) getBadgeFromList(badgeId BadgeID, list []Badge) (*Badge, error) {
+func (s *store) getBadgeFromList(badgeID BadgeID, list []Badge) (*Badge, error) {
 	for _, badge := range list {
-		if badgeId == badge.ID {
+		if badgeID == badge.ID {
 			return &badge, nil
 		}
 	}

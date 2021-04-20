@@ -22,12 +22,12 @@ export type BadgeImageType = string;
 
 export type UserBadge = Badge & Ownership & {granted_by_name: string};
 export type BadgeDetails = Badge & {
-    owners: OwnershipList,
-    created_by_username: string,
+    owners: OwnershipList;
+    created_by_username: string;
 }
 export type AllBadgesBadge = Badge & {
-    granted: number,
-    granted_times: number,
+    granted: number;
+    granted_times: number;
 }
 
 export type OwnershipList = Ownership[]

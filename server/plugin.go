@@ -50,13 +50,3 @@ func (p *Plugin) OnActivate() error {
 
 	return p.API.RegisterCommand(p.getCommand())
 }
-
-func (p *Plugin) getPluginURL() string {
-	siteURLP := p.API.GetConfig().ServiceSettings.SiteURL
-	siteURL := ""
-	if siteURLP != nil {
-		siteURL = *siteURLP
-	}
-
-	return siteURL + "/plugins/" + manifest.Id
-}

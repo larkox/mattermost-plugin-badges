@@ -209,9 +209,12 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 		return false, &model.CommandResponse{Text: err.Error()}, nil
 	}
 
-	p.store.GrantBadge(BadgeID(badgeID), user.Id, extra.UserId)
+	err = p.store.GrantBadge(BadgeID(badgeID), user.Id, extra.UserId)
+	if err != nil {
+		return false, &model.CommandResponse{Text: err.Error()}, nil
+	}
 
-	return false, &model.CommandResponse{Text: "Clean"}, nil
+	return false, &model.CommandResponse{Text: "Granted"}, nil
 }
 
 func (p *Plugin) runTestAddBadge(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
@@ -303,7 +306,7 @@ func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (
 }
 
 func (p *Plugin) runTestKV(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	p.API.KVDeleteAll()
+	_ = p.API.KVDeleteAll()
 	for i := 0; i < 1000; i++ {
 		b := Badge{}
 		b.Image = ":sweat_smile:"

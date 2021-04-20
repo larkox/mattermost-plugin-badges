@@ -12,12 +12,12 @@ import {RHS_STATE_DETAIL} from '../../constants';
 import UserBadgeRow from './user_badge_row';
 
 type Props = {
-    title: string,
-    user: UserProfile | null,
+    title: string;
+    user: UserProfile | null;
     actions: {
-        setRHSView: (view: RHSState) => void
-        setRHSBadge: (badge: BadgeID | null) => void
-    }
+        setRHSView: (view: RHSState) => void;
+        setRHSBadge: (badge: BadgeID | null) => void;
+    };
 }
 
 type State = {
@@ -69,13 +69,11 @@ class UserBadges extends React.PureComponent<Props, State> {
     }
 
     componentDidUpdate(prevProps: Props) {
-        // Typical usage (don't forget to compare props):
         if (this.props.user === prevProps.user) {
             return;
         }
 
         if (!this.props.user) {
-            this.setState({badges: []});
             return;
         }
 
@@ -103,7 +101,6 @@ class UserBadges extends React.PureComponent<Props, State> {
             return (<div>{'No badges yet.'}</div>);
         }
 
-        const row: React.ReactNode[] = [];
         const content = this.state.badges.map((badge) => {
             return (
                 <UserBadgeRow

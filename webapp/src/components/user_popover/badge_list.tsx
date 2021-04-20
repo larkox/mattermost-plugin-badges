@@ -3,25 +3,27 @@ import React from 'react';
 
 import {Tooltip, OverlayTrigger} from 'react-bootstrap';
 
+import {GlobalState} from 'mattermost-redux/types/store';
+
 import {BadgeID, UserBadge} from 'types/badges';
 import Client from 'client/api';
 import BadgeImage from '../utils/badge_image';
 import {RHSState} from 'types/general';
 import {RHS_STATE_DETAIL, RHS_STATE_MY, RHS_STATE_OTHER} from '../../constants';
-import { GlobalState } from 'mattermost-redux/types/store';
+import {markdown} from 'utils/markdown';
 
 type Props = {
-    debug: GlobalState,
-    user: UserProfile,
-    currentUserID: string,
-    openRHS: (() => void) | null,
-    hide: () => void,
-    status?: string,
+    debug: GlobalState;
+    user: UserProfile;
+    currentUserID: string;
+    openRHS: (() => void) | null;
+    hide: () => void;
+    status?: string;
     actions: {
-        setRHSView: (view: RHSState) => Promise<void>
-        setRHSBadge: (id: BadgeID | null) => Promise<void>
-        setRHSUser: (id: string | null) => Promise<void>
-    }
+        setRHSView: (view: RHSState) => Promise<void>;
+        setRHSBadge: (id: BadgeID | null) => Promise<void>;
+        setRHSUser: (id: string | null) => Promise<void>;
+    };
 }
 
 type State = {
@@ -93,7 +95,7 @@ class BadgeList extends React.PureComponent<Props, State> {
                 <OverlayTrigger
                     overlay={<Tooltip>
                         <div>{badge.name}</div>
-                        <div>{badge.description}</div>
+                        <div>{markdown(badge.description)}</div>
                         <div>{`Granted by: ${badge.granted_by_name}`}</div>
                         <div>{`Granted at: ${time.toDateString()}`}</div>
                     </Tooltip>}

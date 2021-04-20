@@ -1,12 +1,12 @@
 import React from 'react';
 
 import {UserBadge} from '../../types/badges';
-import {IMAGE_TYPE_EMOJI} from '../../constants';
 import BadgeImage from '../utils/badge_image';
+import {markdown} from 'utils/markdown';
 
 type Props = {
-    badge: UserBadge
-    onClick: (badge: UserBadge) => void
+    badge: UserBadge;
+    onClick: (badge: UserBadge) => void;
 }
 
 const UserBadgeRow: React.FC<Props> = ({badge, onClick}: Props) => {
@@ -22,7 +22,7 @@ const UserBadgeRow: React.FC<Props> = ({badge, onClick}: Props) => {
                 </span>
             </a>
             <div>{badge.name}</div>
-            <div>{badge.description}</div>
+            <div>{markdown(badge.description)}</div>
             <div>{`Granted by: ${badge.granted_by_name}`}</div>
             <div>{`Granted at: ${time.toDateString()}`}</div>
         </div>

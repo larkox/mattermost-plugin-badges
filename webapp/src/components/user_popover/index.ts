@@ -25,9 +25,9 @@ function mapStateToProps(state: GlobalState) {
 }
 
 type Actions = {
-    setRHSView: (view: RHSState) => Promise<void>
-    setRHSBadge: (id: BadgeID | null) => Promise<void>
-    setRHSUser: (id: string | null) => Promise<void>
+    setRHSView: (view: RHSState) => Promise<void>;
+    setRHSBadge: (id: BadgeID | null) => Promise<void>;
+    setRHSUser: (id: string | null) => Promise<void>;
 }
 
 function mapDispatchToProps(dispatch: Dispatch) {

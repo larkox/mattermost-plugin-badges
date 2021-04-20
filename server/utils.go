@@ -83,6 +83,9 @@ func canCreateType(user model.User) bool {
 }
 
 func dumpObject(o interface{}) {
-	b, _ := json.MarshalIndent(o, "", "    ")
+	b, err := json.MarshalIndent(o, "", "    ")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	fmt.Println(string(b))
 }

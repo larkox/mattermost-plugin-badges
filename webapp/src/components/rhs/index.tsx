@@ -7,6 +7,10 @@ import {getCurrentUser} from 'mattermost-redux/selectors/entities/common';
 
 import React from 'react';
 
+import {getUser} from 'mattermost-redux/selectors/entities/users';
+
+import {GlobalState} from 'mattermost-redux/types/store';
+
 import {getRHSBadge, getRHSUser, getRHSView} from 'selectors';
 import {RHS_STATE_ALL, RHS_STATE_DETAIL, RHS_STATE_OTHER, RHS_STATE_MY} from '../../constants';
 import {RHSState} from 'types/general';
@@ -16,15 +20,13 @@ import {BadgeID} from 'types/badges';
 import UserBadges from './user_badges';
 import BadgeDetailsComponent from './badge_details';
 import AllBadges from './all_badges';
-import { getUser } from 'mattermost-redux/selectors/entities/users';
-import { GlobalState } from 'mattermost-redux/types/store';
 
 const RHS: React.FC = () => {
     const dispatch = useDispatch();
     const currentView = useSelector(getRHSView);
     const currentBadge = useSelector(getRHSBadge);
     const currentUserID = useSelector(getRHSUser);
-    const currentUser = useSelector((state: GlobalState) => getUser(state, (currentUserID as string)))
+    const currentUser = useSelector((state: GlobalState) => getUser(state, (currentUserID as string)));
     const myUser = useSelector(getCurrentUser);
 
     switch (currentView) {

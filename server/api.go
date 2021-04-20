@@ -59,14 +59,14 @@ func (p *Plugin) getBadgeSuggestions(w http.ResponseWriter, r *http.Request, act
 	u, appErr := p.API.GetUser(actingUserID)
 	if appErr != nil {
 		p.API.LogDebug("Error getting user", "error", appErr)
-		w.Write(model.AutocompleteStaticListItemsToJSON(out))
+		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
 		return
 	}
 
 	bb, err := p.store.GetGrantSuggestions(*u)
 	if err != nil {
 		p.API.LogDebug("Error getting suggestions", "error", err)
-		w.Write(model.AutocompleteStaticListItemsToJSON(out))
+		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
 		return
 	}
 
@@ -79,7 +79,7 @@ func (p *Plugin) getBadgeSuggestions(w http.ResponseWriter, r *http.Request, act
 
 		out = append(out, s)
 	}
-	w.Write(model.AutocompleteStaticListItemsToJSON(out))
+	_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
 }
 
 func (p *Plugin) getBadgeTypeSuggestions(w http.ResponseWriter, r *http.Request, actingUserID string) {
@@ -87,14 +87,14 @@ func (p *Plugin) getBadgeTypeSuggestions(w http.ResponseWriter, r *http.Request,
 	u, appErr := p.API.GetUser(actingUserID)
 	if appErr != nil {
 		p.API.LogDebug("Error getting user", "error", appErr)
-		w.Write(model.AutocompleteStaticListItemsToJSON(out))
+		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
 		return
 	}
 
 	types, err := p.store.GetTypeSuggestions(*u)
 	if err != nil {
 		p.API.LogDebug("Error getting suggestions", "error", err)
-		w.Write(model.AutocompleteStaticListItemsToJSON(out))
+		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
 		return
 	}
 
@@ -106,7 +106,7 @@ func (p *Plugin) getBadgeTypeSuggestions(w http.ResponseWriter, r *http.Request,
 
 		out = append(out, s)
 	}
-	w.Write(model.AutocompleteStaticListItemsToJSON(out))
+	_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
 }
 
 func (p *Plugin) getUserBadges(w http.ResponseWriter, r *http.Request, actingUserID string) {
@@ -121,7 +121,7 @@ func (p *Plugin) getUserBadges(w http.ResponseWriter, r *http.Request, actingUse
 	}
 
 	b, _ := json.Marshal(badges)
-	w.Write(b)
+	_, _ = w.Write(b)
 }
 
 func (p *Plugin) getBadgeDetails(w http.ResponseWriter, r *http.Request, actingUserID string) {
@@ -130,7 +130,7 @@ func (p *Plugin) getBadgeDetails(w http.ResponseWriter, r *http.Request, actingU
 		errMessage := "Missing badge id"
 		p.API.LogDebug(errMessage)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(errMessage))
+		_, _ = w.Write([]byte(errMessage))
 		return
 	}
 
@@ -138,7 +138,7 @@ func (p *Plugin) getBadgeDetails(w http.ResponseWriter, r *http.Request, actingU
 	if err != nil {
 		errMessage := "Cannot convert badgeID to number"
 		p.API.LogDebug(errMessage, "badgeID", badgeIDString, "err", err)
-		w.Write([]byte(errMessage))
+		_, _ = w.Write([]byte(errMessage))
 		return
 	}
 
@@ -150,7 +150,7 @@ func (p *Plugin) getBadgeDetails(w http.ResponseWriter, r *http.Request, actingU
 	}
 
 	b, _ := json.Marshal(badge)
-	w.Write(b)
+	_, _ = w.Write(b)
 }
 
 func (p *Plugin) getAllBadges(w http.ResponseWriter, r *http.Request, actingUserID string) {
@@ -160,7 +160,7 @@ func (p *Plugin) getAllBadges(w http.ResponseWriter, r *http.Request, actingUser
 	}
 
 	b, _ := json.Marshal(badge)
-	w.Write(b)
+	_, _ = w.Write(b)
 }
 
 func (p *Plugin) extractUserMiddleWare(handler HTTPHandlerFuncWithUser, responseType ResponseType) http.HandlerFunc {

@@ -38,6 +38,7 @@
     "import/resolver": "webpack"
   },
   "rules": {
+    "eol-last": ["error", "always"],
     "array-bracket-spacing": [
       2,
       "never"
@@ -635,6 +636,39 @@
       "files": ["**/*.tsx", "**/*.ts"],
       "extends": "plugin:@typescript-eslint/recommended",
       "rules": {
+        "@typescript-eslint/member-delimiter-style": ["error"],
+        "camelcase": 0,
+        "no-shadow": 0,
+        "import/no-unresolved": 0, // ts handles this better
+        "@typescript-eslint/naming-convention": [
+          2,
+          {
+            "selector": "function",
+            "format": ["camelCase", "PascalCase"]
+          },
+          {
+            "selector": "variable",
+            "format": ["camelCase", "PascalCase", "UPPER_CASE"]
+          },
+          {
+            "selector": "parameter",
+            "format": ["camelCase", "PascalCase"],
+            "leadingUnderscore": "allow"
+          },
+          {
+            "selector": "typeLike",
+            "format": ["PascalCase"]
+          }
+        ],
+        "@typescript-eslint/no-non-null-assertion": 0,
+        "@typescript-eslint/no-unused-vars": [
+          2,
+          {
+            "vars": "all",
+            "args": "after-used"
+          }
+        ],
+        "@typescript-eslint/no-empty-function": 0,
         "@typescript-eslint/ban-ts-ignore": 0,
         "@typescript-eslint/ban-types": 1,
         "@typescript-eslint/ban-ts-comment": 0,
@@ -649,6 +683,7 @@
             "SwitchCase": 0
           }
         ],
+        "no-use-before-define": "off",
         "@typescript-eslint/no-use-before-define": [
           2,
           {

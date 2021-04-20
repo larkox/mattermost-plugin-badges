@@ -8,18 +8,18 @@ import React from 'react';
 
 import {setRHSView, setShowRHSAction} from 'actions/actions';
 
-import Reducer from './reducers';
-
 import UserBadges from 'components/rhs';
 
 import ChannelHeaderButton from 'components/channel_header_button';
+
+import Reducer from './reducers';
 
 import manifest from './manifest';
 
 // eslint-disable-next-line import/no-unresolved
 import {PluginRegistry} from './types/mattermost-webapp';
 import BadgeList from './components/user_popover/';
-import { RHS_STATE_ALL } from './constants';
+import {RHS_STATE_ALL} from './constants';
 
 export default class Plugin {
     public async initialize(registry: PluginRegistry, store: Store<GlobalState, GenericAction>) {
@@ -33,7 +33,7 @@ export default class Plugin {
         registry.registerChannelHeaderButtonAction(
             <ChannelHeaderButton/>,
             () => {
-                store.dispatch(setRHSView(RHS_STATE_ALL))
+                store.dispatch(setRHSView(RHS_STATE_ALL));
                 store.dispatch(toggleRHSPlugin);
             },
             'Badges',
@@ -44,7 +44,7 @@ export default class Plugin {
 
 declare global {
     interface Window {
-        registerPlugin(id: string, plugin: Plugin): void
+        registerPlugin(id: string, plugin: Plugin): void;
     }
 }
 

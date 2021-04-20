@@ -12,9 +12,9 @@ import AllBadgesRow from './all_badges_row';
 
 type Props = {
     actions: {
-        setRHSView: (view: RHSState) => void
-        setRHSBadge: (badge: BadgeID | null) => void
-    }
+        setRHSView: (view: RHSState) => void;
+        setRHSBadge: (badge: BadgeID | null) => void;
+    };
 }
 
 type State = {
@@ -76,7 +76,6 @@ class AllBadges extends React.PureComponent<Props, State> {
             return (<div>{'No badges yet.'}</div>);
         }
 
-        const row: React.ReactNode[] = [];
         const content = this.state.badges.map((badge) => {
             return (
                 <AllBadgesRow
