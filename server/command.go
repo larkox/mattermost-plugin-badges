@@ -3,11 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
+	commandparser "github.com/larkox/mattermost-plugin-badges/server/command_parser"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/spf13/pflag"
@@ -41,9 +40,7 @@ func (p *Plugin) postCommandResponse(args *model.CommandArgs, text string) {
 
 // ExecuteCommand executes a given command and returns a command response.
 func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
-	spaceRegExp := regexp.MustCompile(`\s+`)
-	trimmedArgs := spaceRegExp.ReplaceAllString(strings.TrimSpace(args.Command), " ")
-	stringArgs := strings.Split(trimmedArgs, " ")
+	stringArgs := commandparser.Parse(args.Command)
 	lengthOfArgs := len(stringArgs)
 	restOfArgs := []string{}
 
