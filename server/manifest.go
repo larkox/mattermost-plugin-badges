@@ -12,9 +12,13 @@ var manifest *model.Manifest
 
 const manifestStr = `
 {
-  "id": "com.mattermost.plugin-starter-template",
-  "name": "Plugin Starter Template",
-  "description": "This plugin serves as a starting point for writing a Mattermost plugin.",
+  "id": "com.mattermost.badges",
+  "name": "Badges for Mattermost",
+  "description": "This plugin add badges support to Mattermost.",
+  "homepage_url": "https://github.com/mattermost/mattermost-plugin-badges",
+  "support_url": "https://github.com/mattermost/mattermost-plugin-badges/issues",
+  "release_notes_url": "https://github.com/mattermost/mattermost-plugin-badges/releases/tag/v0.1.0",
+  "icon_path": "assets/starter-template-icon.svg",
   "version": "0.1.0",
   "min_server_version": "5.12.0",
   "server": {

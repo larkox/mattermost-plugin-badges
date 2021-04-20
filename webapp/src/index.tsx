@@ -1,16 +1,44 @@
-import {Store, Action} from 'redux';
+import {Store} from 'redux';
 
 import {GlobalState} from 'mattermost-redux/types/store';
+
+import {GenericAction} from 'mattermost-redux/types/actions';
+
+import React from 'react';
+
+import {setRHSView, setShowRHSAction} from 'actions/actions';
+
+import Reducer from './reducers';
+
+import UserBadges from 'components/rhs';
+
+import ChannelHeaderButton from 'components/channel_header_button';
 
 import manifest from './manifest';
 
 // eslint-disable-next-line import/no-unresolved
 import {PluginRegistry} from './types/mattermost-webapp';
+import BadgeList from './components/user_popover/';
+import { RHS_STATE_ALL } from './constants';
 
 export default class Plugin {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
-    public async initialize(registry: PluginRegistry, store: Store<GlobalState, Action<Record<string, unknown>>>) {
-        // @see https://developers.mattermost.com/extend/plugins/webapp/reference/
+    public async initialize(registry: PluginRegistry, store: Store<GlobalState, GenericAction>) {
+        registry.registerReducer(Reducer);
+
+        registry.registerPopoverUserAttributesComponent(BadgeList);
+
+        const {showRHSPlugin, toggleRHSPlugin} = registry.registerRightHandSidebarComponent(UserBadges, 'Badges');
+        store.dispatch(setShowRHSAction(() => store.dispatch(showRHSPlugin)));
+
+        registry.registerChannelHeaderButtonAction(
+            <ChannelHeaderButton/>,
+            () => {
+                store.dispatch(setRHSView(RHS_STATE_ALL))
+                store.dispatch(toggleRHSPlugin);
+            },
+            'Badges',
+            'Open your list of badges.',
+        );
     }
 }
 
