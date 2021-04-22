@@ -1,0 +1,16 @@
+.AllBadgesRow {
+    display: flex;
+    border: 1px solid rgba(var(--center-channel-color-rgb), 0.16);
+    border-radius: 4px;
+    align-items: center;
+    padding: 5px;
+    .badge-icon {
+        padding: 10px;
+    }
+    .badge-name {
+        font-weight: 600;
+    }
+    .granted-by {
+        font-size: 10px;
+    }
+}

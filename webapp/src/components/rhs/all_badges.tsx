@@ -10,6 +10,8 @@ import {RHS_STATE_DETAIL} from '../../constants';
 
 import AllBadgesRow from './all_badges_row';
 
+import './all_badges.scss';
+
 type Props = {
     actions: {
         setRHSView: (view: RHSState) => void;
@@ -69,11 +71,11 @@ class AllBadges extends React.PureComponent<Props, State> {
 
     render() {
         if (this.state.loading) {
-            return (<div>{'Loading...'}</div>);
+            return (<div className='AllBadges'>{'Loading...'}</div>);
         }
 
         if (!this.state.badges || this.state.badges.length === 0) {
-            return (<div>{'No badges yet.'}</div>);
+            return (<div className='AllBadges'>{'No badges yet.'}</div>);
         }
 
         const content = this.state.badges.map((badge) => {
@@ -86,7 +88,7 @@ class AllBadges extends React.PureComponent<Props, State> {
             );
         });
         return (
-            <div style={{height: '100%'}}>
+            <div className='AllBadges'>
                 <div><b>{'All badges'}</b></div>
                 <Scrollbars
                     autoHide={true}
