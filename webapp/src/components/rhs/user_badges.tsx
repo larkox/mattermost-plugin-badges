@@ -11,6 +11,8 @@ import {RHS_STATE_DETAIL} from '../../constants';
 
 import UserBadgeRow from './user_badge_row';
 
+import './user_badges.scss'
+
 type Props = {
     title: string;
     user: UserProfile | null;
@@ -111,7 +113,7 @@ class UserBadges extends React.PureComponent<Props, State> {
             );
         });
         return (
-            <div style={{height: '100%'}}>
+            <div className='UserBadges'>
                 <div><b>{this.props.title}</b></div>
                 <Scrollbars
                     autoHide={true}

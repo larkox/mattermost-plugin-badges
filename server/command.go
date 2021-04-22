@@ -230,6 +230,20 @@ func (p *Plugin) runTestAddBadge(args []string, extra *model.CommandArgs) (bool,
 
 func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
 	_ = p.API.KVDeleteAll()
+
+	t := &BadgeTypeDefinition{
+		Name:      "Demo",
+		Frame:     "",
+		CreatedBy: extra.UserId,
+		CanGrant: PermissionScheme{
+			Everyone: true,
+		},
+		CanCreate: PermissionScheme{
+			Everyone: true,
+		},
+	}
+	t, _ = p.store.AddType(*t)
+
 	info := []struct {
 		name        string
 		description string
@@ -282,7 +296,7 @@ func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (
 			Description: i.description,
 			Image:       i.image,
 			ImageType:   ImageTypeEmoji,
-			Type:        0,
+			Type:        t.ID,
 			Multiple:    true,
 			CreatedBy:   extra.UserId,
 		}
@@ -299,6 +313,19 @@ func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (
 	_ = p.store.GrantBadge(5, extra.UserId, extra.UserId)
 	_ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
 	_ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(3, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(1, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(3, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(5, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
+	_ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
 	return false, &model.CommandResponse{Text: "Added"}, nil
 }
 

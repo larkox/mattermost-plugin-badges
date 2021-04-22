@@ -4,6 +4,8 @@ import {UserBadge} from '../../types/badges';
 import BadgeImage from '../utils/badge_image';
 import {markdown} from 'utils/markdown';
 
+import './user_badge_row.scss'
+
 type Props = {
     badge: UserBadge;
     onClick: (badge: UserBadge) => void;
@@ -12,19 +14,21 @@ type Props = {
 const UserBadgeRow: React.FC<Props> = ({badge, onClick}: Props) => {
     const time = new Date(badge.time);
     return (
-        <div>
+        <div className='UserBadgesRow'>
             <a onClick={() => onClick(badge)}>
-                <span>
+                <span className='user-badge-icon'>
                     <BadgeImage
                         badge={badge}
                         size={32}
                     />
                 </span>
             </a>
-            <div>{badge.name}</div>
-            <div>{markdown(badge.description)}</div>
-            <div>{`Granted by: ${badge.granted_by_name}`}</div>
-            <div>{`Granted at: ${time.toDateString()}`}</div>
+            <div className='user-badge-text'>
+                <div className='user-badge-name'>{badge.name}</div>
+                <div className='user-badge-description'>{markdown(badge.description)}</div>
+                <div className='user-badge-granted-by'>{`Granted by: ${badge.granted_by_name}`}</div>
+                <div className='user-badge-granted-at'>{`Granted at: ${time.toDateString()}`}</div>
+            </div>
         </div>
     );
 };

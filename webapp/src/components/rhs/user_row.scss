@@ -1,17 +1,13 @@
-.AllBadgesRow {
-    display: flex;
+.UserRow {
     border: 1px solid rgba(var(--center-channel-color-rgb), 0.16);
     border-radius: 4px;
     align-items: center;
     padding: 5px;
     margin-bottom: 3px;
-    .badge-icon {
-        padding: 10px;
-    }
-    .badge-name {
+    .badge-user-username {
         font-weight: 600;
     }
-    .granted-by {
+    .badge-user-granted-at {
         font-size: 10px;
     }
 }

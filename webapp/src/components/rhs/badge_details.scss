@@ -1,0 +1,23 @@
+.BadgeDetails {
+    height: 100%;
+    padding: 10px;
+    .badge-info {
+        display: flex;
+        align-items: center;
+        padding: 5px;
+        .badge-icon {
+            padding: 10px;
+        }
+        .badge-name {
+            font-weight: 600;
+        }
+        .created-by {
+            font-size: 10px;
+        }
+        .badge-descrition {
+            p {
+                margin: 0px
+            }
+        }
+    }
+}

@@ -7,6 +7,7 @@ import {UserProfile} from 'mattermost-redux/types/users';
 
 import {Ownership} from '../../types/badges';
 
+import './user_row.scss'
 type Props = {
     ownership: Ownership;
     onClick: (user: string) => void;
@@ -27,13 +28,10 @@ const UserBadgeRow: React.FC<Props> = ({ownership, onClick}: Props) => {
 
     const time = new Date(ownership.time);
     return (
-        <div>
-            <a onClick={() => onClick(ownership.user)}>
-                <div>{`@${user.username}`}</div>
-                <div>{`Granted by: ${grantedByName}`}</div>
-                <div>{`Granted at: ${time.toDateString()}`}</div>
-            </a>
-
+        <div className='UserRow'>
+            <div className='badge-user-username'><a onClick={() => onClick(ownership.user)}>{`@${user.username}`}</a></div>
+            <div className='badge-user-granted-by'>{`Granted by: ${grantedByName}`}</div>
+            <div className='badge-user-granted-at'>{`Granted at: ${time.toDateString()}`}</div>
         </div>
     );
 };

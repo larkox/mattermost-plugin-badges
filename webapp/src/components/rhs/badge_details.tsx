@@ -13,6 +13,8 @@ import {markdown} from 'utils/markdown';
 
 import UserRow from './user_row';
 
+import './badge_details.scss';
+
 type Props = {
     badgeID: BadgeID | null;
     currentUserID: string;
@@ -121,18 +123,20 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
             );
         });
         return (
-            <div style={{height: '100%'}}>
+            <div className='BadgeDetails'>
                 <div><b>{'Badge Details'}</b></div>
-                <div>
-                    <span>
+                <div className='badge-info'>
+                    <span className='badge-icon'>
                         <BadgeImage
                             badge={badge}
                             size={32}
                         />
                     </span>
-                    <div>{badge.name}</div>
-                    <div>{markdown(badge.description)}</div>
-                    <div>{`Created by: ${badge.created_by_username}`}</div>
+                    <div className='badge-text'>
+                        <div className='badge-name'>{badge.name}</div>
+                        <div className='badge-description'>{markdown(badge.description)}</div>
+                        <div className='created-by'>{`Created by: ${badge.created_by_username}`}</div>
+                    </div>
                 </div>
                 <div><b>{'Granted to:'}</b></div>
                 <Scrollbars

@@ -30,8 +30,8 @@ type State = {
     badges?: UserBadge[];
 }
 
-const MAX_BADGES = 10;
-const BADGES_PER_ROW = 5;
+const MAX_BADGES = 20;
+const BADGES_PER_ROW = 10;
 
 class BadgeList extends React.PureComponent<Props, State> {
     constructor(props: Props) {
@@ -104,7 +104,7 @@ class BadgeList extends React.PureComponent<Props, State> {
                         <a onClick={() => this.onBadgeClick(badge)}>
                             <BadgeImage
                                 badge={badge}
-                                size={16}
+                                size={24}
                             />
                         </a>
                     </span>
