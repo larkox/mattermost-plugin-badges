@@ -2,7 +2,7 @@ import React from 'react';
 
 import {Badge} from '../../types/badges';
 import RenderEmoji from '../utils/emoji';
-import {IMAGE_TYPE_EMOJI} from '../../constants';
+import {IMAGE_TYPE_ABSOLUTE_URL, IMAGE_TYPE_EMOJI} from '../../constants';
 
 type Props = {
     badge: Badge;
@@ -18,6 +18,10 @@ const BadgeImage: React.FC<Props> = ({badge, size}: Props) => {
                 size={size}
             />
         );
+    case IMAGE_TYPE_ABSOLUTE_URL:
+        return (
+            <img src={badge.image} width={size} height={size} />
+        )
     default:
         return null;
     }

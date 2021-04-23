@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/larkox/mattermost-plugin-badges/badgesmodel"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 )
@@ -14,21 +15,24 @@ var errBadgeNotFound = errors.New("badge not found")
 
 type Store interface {
 	// Interface
-	GetUserBadges(userID string) ([]UserBadge, error)
-	GetAllBadges() ([]AllBadgesBadge, error)
-	GetBadgeDetails(badgeID BadgeID) (*BadgeDetails, error)
+	GetUserBadges(userID string) ([]badgesmodel.UserBadge, error)
+	GetAllBadges() ([]badgesmodel.AllBadgesBadge, error)
+	GetBadgeDetails(badgeID badgesmodel.BadgeID) (*badgesmodel.BadgeDetails, error)
 
 	// Autocomplete
-	GetGrantSuggestions(user model.User) ([]Badge, error)
-	GetTypeSuggestions(user model.User) (BadgeTypeList, error)
+	GetGrantSuggestions(user model.User) ([]badgesmodel.Badge, error)
+	GetTypeSuggestions(user model.User) (badgesmodel.BadgeTypeList, error)
 
 	// API
-	AddBadge(badge Badge) (*Badge, error)
-	GrantBadge(badgeID BadgeID, userID string, grantedBy string) error
-	AddType(t BadgeTypeDefinition) (*BadgeTypeDefinition, error)
+	AddBadge(badge badgesmodel.Badge) (*badgesmodel.Badge, error)
+	GrantBadge(badgeID badgesmodel.BadgeID, userID string, grantedBy string) (bool, error)
+	AddType(t badgesmodel.BadgeTypeDefinition) (*badgesmodel.BadgeTypeDefinition, error)
+
+	// PAPI
+	EnsureBadges(badges []badgesmodel.Badge, pluginID, botID string) ([]badgesmodel.Badge, error)
 
 	// DEBUG
-	DebugGetTypes() BadgeTypeList
+	DebugGetTypes() badgesmodel.BadgeTypeList
 }
 
 type store struct {
@@ -41,12 +45,64 @@ func NewStore(api plugin.API) Store {
 	}
 }
 
-func (s *store) DebugGetTypes() BadgeTypeList {
+func (s *store) EnsureBadges(badges []badgesmodel.Badge, pluginID, botID string) ([]badgesmodel.Badge, error) {
+	l, err := s.getAllTypes()
+	if err != nil {
+		return nil, err
+	}
+
+	var tDef *badgesmodel.BadgeTypeDefinition
+	for _, t := range l {
+		if t.CreatedBy == botID {
+			tDef = &t
+			break
+		}
+	}
+
+	if tDef == nil {
+		tDef, err = s.addType(badgesmodel.BadgeTypeDefinition{
+			Name:      "Plugin badges: " + pluginID,
+			CreatedBy: botID,
+		}, true)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	bb, err := s.getAllBadges()
+	if err != nil {
+		return nil, err
+	}
+
+	out := []badgesmodel.Badge{}
+	for _, pb := range badges {
+		found := false
+		for _, b := range bb {
+			if b.CreatedBy == botID && b.Name == pb.Name {
+				found = true
+				out = append(out, b)
+				break
+			}
+		}
+		if !found {
+			pb.Type = tDef.ID
+			pb.CreatedBy = botID
+			newBadge, err := s.AddBadge(pb)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, *newBadge)
+		}
+	}
+
+	return out, nil
+}
+func (s *store) DebugGetTypes() badgesmodel.BadgeTypeList {
 	l, _ := s.getAllTypes()
 	return l
 }
 
-func (s *store) AddBadge(b Badge) (*Badge, error) {
+func (s *store) AddBadge(b badgesmodel.Badge) (*badgesmodel.Badge, error) {
 	if !b.IsValid() {
 		return nil, errInvalidBadge
 	}
@@ -75,7 +131,7 @@ func (s *store) AddBadge(b Badge) (*Badge, error) {
 		return nil, err
 	}
 
-	var lastID BadgeID = -1
+	var lastID badgesmodel.BadgeID = -1
 	if len(badgeList) > 0 {
 		lastID = badgeList[len(badgeList)-1].ID
 	}
@@ -95,13 +151,17 @@ func (s *store) AddBadge(b Badge) (*Badge, error) {
 	return &b, nil
 }
 
-func (s *store) AddType(t BadgeTypeDefinition) (*BadgeTypeDefinition, error) {
+func (s *store) AddType(t badgesmodel.BadgeTypeDefinition) (*badgesmodel.BadgeTypeDefinition, error) {
+	return s.addType(t, false)
+}
+
+func (s *store) addType(t badgesmodel.BadgeTypeDefinition, isPlugin bool) (*badgesmodel.BadgeTypeDefinition, error) {
 	u, appErr := s.api.GetUser(t.CreatedBy)
 	if appErr != nil {
 		return nil, appErr
 	}
 
-	if !canCreateType(*u) {
+	if !canCreateType(*u, isPlugin) {
 		return nil, errors.New("you have no permission to create this badge type")
 	}
 
@@ -110,7 +170,7 @@ func (s *store) AddType(t BadgeTypeDefinition) (*BadgeTypeDefinition, error) {
 		return nil, err
 	}
 
-	var lastID BadgeType = -1
+	var lastID badgesmodel.BadgeType = -1
 	if len(badgeTypes) > 0 {
 		lastID = badgeTypes[len(badgeTypes)-1].ID
 	}
@@ -130,7 +190,7 @@ func (s *store) AddType(t BadgeTypeDefinition) (*BadgeTypeDefinition, error) {
 	return &t, nil
 }
 
-func (s *store) GetAllBadges() ([]AllBadgesBadge, error) {
+func (s *store) GetAllBadges() ([]badgesmodel.AllBadgesBadge, error) {
 	badges, err := s.getAllBadges()
 	if err != nil {
 		return nil, err
@@ -141,16 +201,18 @@ func (s *store) GetAllBadges() ([]AllBadgesBadge, error) {
 		return nil, err
 	}
 
-	out := []AllBadgesBadge{}
+	out := []badgesmodel.AllBadgesBadge{}
 	for _, b := range badges {
-		badge := AllBadgesBadge{
+		badge := badgesmodel.AllBadgesBadge{
 			Badge: b,
 		}
 		grantedTo := map[string]bool{}
 		for _, o := range ownership {
-			if o.Badge == badge.ID {
-				badge.GrantedTimes++
+			if o.Badge != badge.ID {
+				continue
 			}
+			badge.GrantedTimes++
+
 			if !grantedTo[o.User] {
 				badge.Granted++
 				grantedTo[o.User] = true
@@ -162,7 +224,7 @@ func (s *store) GetAllBadges() ([]AllBadgesBadge, error) {
 	return out, nil
 }
 
-func (s *store) GetGrantSuggestions(user model.User) ([]Badge, error) {
+func (s *store) GetGrantSuggestions(user model.User) ([]badgesmodel.Badge, error) {
 	badges, err := s.getAllBadges()
 	if err != nil {
 		return nil, err
@@ -173,7 +235,7 @@ func (s *store) GetGrantSuggestions(user model.User) ([]Badge, error) {
 		return nil, err
 	}
 
-	out := []Badge{}
+	out := []badgesmodel.Badge{}
 	for _, b := range badges {
 		badgeType := types.GetType(b.Type)
 		if badgeType == nil {
@@ -188,13 +250,13 @@ func (s *store) GetGrantSuggestions(user model.User) ([]Badge, error) {
 	return out, nil
 }
 
-func (s *store) GetTypeSuggestions(user model.User) (BadgeTypeList, error) {
+func (s *store) GetTypeSuggestions(user model.User) (badgesmodel.BadgeTypeList, error) {
 	types, err := s.getAllTypes()
 	if err != nil {
 		return nil, err
 	}
 
-	out := BadgeTypeList{}
+	out := badgesmodel.BadgeTypeList{}
 	for _, t := range types {
 		if canCreateBadge(user, t) {
 			out = append(out, t)
@@ -204,13 +266,13 @@ func (s *store) GetTypeSuggestions(user model.User) (BadgeTypeList, error) {
 	return out, nil
 }
 
-func (s *store) getAllTypes() (BadgeTypeList, error) {
+func (s *store) getAllTypes() (badgesmodel.BadgeTypeList, error) {
 	data, appErr := s.api.KVGet(KVKeyTypes)
 	if appErr != nil {
 		return nil, appErr
 	}
 
-	typeList := []BadgeTypeDefinition{}
+	typeList := []badgesmodel.BadgeTypeDefinition{}
 	if data != nil {
 		err := json.Unmarshal(data, &typeList)
 		if err != nil {
@@ -221,13 +283,13 @@ func (s *store) getAllTypes() (BadgeTypeList, error) {
 	return typeList, nil
 }
 
-func (s *store) getAllBadges() ([]Badge, error) {
+func (s *store) getAllBadges() ([]badgesmodel.Badge, error) {
 	data, appErr := s.api.KVGet(KVKeyBadges)
 	if appErr != nil {
 		return nil, appErr
 	}
 
-	badgeList := []Badge{}
+	badgeList := []badgesmodel.Badge{}
 	if data != nil {
 		err := json.Unmarshal(data, &badgeList)
 		if err != nil {
@@ -238,7 +300,7 @@ func (s *store) getAllBadges() ([]Badge, error) {
 	return badgeList, nil
 }
 
-func (s *store) getBadge(id BadgeID) (*Badge, error) {
+func (s *store) getBadge(id badgesmodel.BadgeID) (*badgesmodel.Badge, error) {
 	badgeList, err := s.getAllBadges()
 	if err != nil {
 		return nil, err
@@ -247,7 +309,7 @@ func (s *store) getBadge(id BadgeID) (*Badge, error) {
 	return s.getBadgeFromList(id, badgeList)
 }
 
-func (s *store) GetBadgeDetails(id BadgeID) (*BadgeDetails, error) {
+func (s *store) GetBadgeDetails(id badgesmodel.BadgeID) (*badgesmodel.BadgeDetails, error) {
 	badge, err := s.getBadge(id)
 	if err != nil {
 		return nil, err
@@ -270,20 +332,20 @@ func (s *store) GetBadgeDetails(id BadgeID) (*BadgeDetails, error) {
 		}
 	}
 
-	return &BadgeDetails{
+	return &badgesmodel.BadgeDetails{
 		Badge:             *badge,
 		Owners:            owners,
 		CreatedByUsername: createdByName,
 	}, nil
 }
 
-func (s *store) getOwnershipList() (OwnershipList, error) {
+func (s *store) getOwnershipList() (badgesmodel.OwnershipList, error) {
 	data, appErr := s.api.KVGet(KVKeyOwnership)
 	if appErr != nil {
 		return nil, appErr
 	}
 
-	ownership := OwnershipList{}
+	ownership := badgesmodel.OwnershipList{}
 	if data != nil {
 		err := json.Unmarshal(data, &ownership)
 		if err != nil {
@@ -294,46 +356,46 @@ func (s *store) getOwnershipList() (OwnershipList, error) {
 	return ownership, nil
 }
 
-func (s *store) GrantBadge(id BadgeID, userID string, grantedBy string) error {
+func (s *store) GrantBadge(id badgesmodel.BadgeID, userID string, grantedBy string) (bool, error) {
 	badge, err := s.getBadge(id)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	types, err := s.getAllTypes()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	badgeType := types.GetType(badge.Type)
 	if badgeType == nil {
-		return errors.New("badge type not found")
+		return false, errors.New("badge type not found")
 	}
 
 	user, appErr := s.api.GetUser(userID)
 	if appErr != nil {
-		return err
+		return false, err
 	}
 
 	grantedByUser, appErr := s.api.GetUser(grantedBy)
 	if appErr != nil {
-		return err
+		return false, err
 	}
 
 	if !canGrantBadge(*grantedByUser, *badge, *badgeType) {
-		return errors.New("you don't have permission to grant this badge")
+		return false, errors.New("you don't have permission to grant this badge")
 	}
 
 	ownership, err := s.getOwnershipList()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if !badge.Multiple && ownership.IsOwned(user.Id, id) {
-		return nil
+		return false, nil
 	}
 
-	ownership = append(ownership, Ownership{
+	ownership = append(ownership, badgesmodel.Ownership{
 		User:      user.Id,
 		Badge:     badge.ID,
 		Time:      time.Now(),
@@ -342,18 +404,18 @@ func (s *store) GrantBadge(id BadgeID, userID string, grantedBy string) error {
 
 	data, err := json.Marshal(ownership)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	appErr = s.api.KVSet(KVKeyOwnership, data)
 	if appErr != nil {
-		return appErr
+		return false, appErr
 	}
 
-	return nil
+	return true, nil
 }
 
-func (s *store) GetUserBadges(userID string) ([]UserBadge, error) {
+func (s *store) GetUserBadges(userID string) ([]badgesmodel.UserBadge, error) {
 	ownership, err := s.getOwnershipList()
 	if err != nil {
 		return nil, err
@@ -364,7 +426,7 @@ func (s *store) GetUserBadges(userID string) ([]UserBadge, error) {
 		return nil, err
 	}
 
-	out := []UserBadge{}
+	out := []badgesmodel.UserBadge{}
 	for _, o := range ownership {
 		if o.User == userID {
 			badge, err := s.getBadgeFromList(o.Badge, badges)
@@ -385,14 +447,14 @@ func (s *store) GetUserBadges(userID string) ([]UserBadge, error) {
 				}
 			}
 
-			out = append([]UserBadge{{Badge: *badge, Ownership: o, GrantedByUsername: grantedByName}}, out...)
+			out = append([]badgesmodel.UserBadge{{Badge: *badge, Ownership: o, GrantedByUsername: grantedByName}}, out...)
 		}
 	}
 
 	return out, nil
 }
 
-func (s *store) getBadgeFromList(badgeID BadgeID, list []Badge) (*Badge, error) {
+func (s *store) getBadgeFromList(badgeID badgesmodel.BadgeID, list []badgesmodel.Badge) (*badgesmodel.Badge, error) {
 	for _, badge := range list {
 		if badgeID == badge.ID {
 			return &badge, nil
@@ -401,7 +463,7 @@ func (s *store) getBadgeFromList(badgeID BadgeID, list []Badge) (*Badge, error) 
 	return nil, errBadgeNotFound
 }
 
-func (s *store) getBadgeUsers(badgeID BadgeID) (OwnershipList, error) {
+func (s *store) getBadgeUsers(badgeID badgesmodel.BadgeID) (badgesmodel.OwnershipList, error) {
 	_, err := s.getBadge(badgeID)
 	if err != nil {
 		return nil, errBadgeNotFound
@@ -412,7 +474,7 @@ func (s *store) getBadgeUsers(badgeID BadgeID) (OwnershipList, error) {
 		return nil, err
 	}
 
-	out := OwnershipList{}
+	out := badgesmodel.OwnershipList{}
 	for _, o := range ownership {
 		if o.Badge == badgeID {
 			out = append(out, o)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/larkox/mattermost-plugin-badges/badgesmodel"
 	"github.com/mattermost/mattermost-server/v5/model"
 )
 
@@ -22,7 +23,7 @@ func areRolesAllowed(userRoles []string, allowedRoles map[string]bool) bool {
 	return false
 }
 
-func canGrantBadge(user model.User, badge Badge, badgeType BadgeTypeDefinition) bool {
+func canGrantBadge(user model.User, badge badgesmodel.Badge, badgeType badgesmodel.BadgeTypeDefinition) bool {
 	if user.IsSystemAdmin() {
 		return true
 	}
@@ -52,7 +53,7 @@ func canGrantBadge(user model.User, badge Badge, badgeType BadgeTypeDefinition) 
 	return badgeType.CanGrant.Everyone
 }
 
-func canCreateBadge(user model.User, badgeType BadgeTypeDefinition) bool {
+func canCreateBadge(user model.User, badgeType badgesmodel.BadgeTypeDefinition) bool {
 	if user.IsSystemAdmin() {
 		return true
 	}
@@ -78,7 +79,11 @@ func canCreateBadge(user model.User, badgeType BadgeTypeDefinition) bool {
 	return badgeType.CanCreate.Everyone
 }
 
-func canCreateType(user model.User) bool {
+func canCreateType(user model.User, isPlugin bool) bool {
+	if isPlugin {
+		return true
+	}
+
 	return user.IsSystemAdmin()
 }
 
@@ -88,4 +93,23 @@ func dumpObject(o interface{}) {
 		fmt.Println(err.Error())
 	}
 	fmt.Println(string(b))
+}
+
+func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter, granted string) {
+	b, errBadge := p.store.GetBadgeDetails(badgeID)
+	u, errUser := p.mm.User.Get(granter)
+	if errBadge != nil {
+		p.mm.Log.Debug("badge error", "err", errBadge)
+	}
+	if errUser != nil {
+		p.mm.Log.Debug("user error", "err", errUser)
+	}
+	if errBadge == nil && errUser == nil {
+		err := p.mm.Post.DM(p.BotUserID, granted, &model.Post{
+			Message: fmt.Sprintf("@%s granted you the `%s` badge.", u.Username, b.Name),
+		})
+		if err != nil {
+			p.mm.Log.Debug("dm error", "err", err)
+		}
+	}
 }

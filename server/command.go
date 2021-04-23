@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/larkox/mattermost-plugin-badges/badgesmodel"
 	commandparser "github.com/larkox/mattermost-plugin-badges/server/command_parser"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
@@ -35,7 +36,7 @@ func (p *Plugin) postCommandResponse(args *model.CommandArgs, text string) {
 		ChannelId: args.ChannelId,
 		Message:   text,
 	}
-	_ = p.API.SendEphemeralPost(args.UserId, post)
+	p.mm.Post.SendEphemeralPost(args.UserId, post)
 }
 
 // ExecuteCommand executes a given command and returns a command response.
@@ -79,7 +80,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		if isUserError {
 			p.postCommandResponse(args, fmt.Sprintf("__Error: %s.__\n\nRun `/todo help` for usage instructions.", err.Error()))
 		} else {
-			p.API.LogError(err.Error())
+			p.mm.Log.Error(err.Error())
 			p.postCommandResponse(args, "An unknown error occurred. Please talk to your system administrator for help.")
 		}
 	}
@@ -98,7 +99,7 @@ func (p *Plugin) runTestListTypes(args []string, extra *model.CommandArgs) (bool
 }
 
 func (p *Plugin) runClean(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	_ = p.API.KVDeleteAll()
+	_ = p.mm.KV.DeleteAll()
 	return false, &model.CommandResponse{Text: "Clean"}, nil
 }
 
@@ -126,8 +127,8 @@ func (p *Plugin) runCreate(args []string, extra *model.CommandArgs) (bool, *mode
 }
 
 func (p *Plugin) runCreateBadge(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	b := Badge{
-		ImageType: ImageTypeEmoji,
+	b := badgesmodel.Badge{
+		ImageType: badgesmodel.ImageTypeEmoji,
 		CreatedBy: extra.UserId,
 	}
 	var badgeType int
@@ -142,7 +143,7 @@ func (p *Plugin) runCreateBadge(args []string, extra *model.CommandArgs) (bool, 
 		return false, &model.CommandResponse{Text: err.Error()}, nil
 	}
 
-	b.Type = BadgeType(badgeType)
+	b.Type = badgesmodel.BadgeType(badgeType)
 	b.Multiple = multiple == TrueString
 	if b.Image[0] == ':' {
 		b.Image = b.Image[1 : len(b.Image)-1]
@@ -157,7 +158,7 @@ func (p *Plugin) runCreateBadge(args []string, extra *model.CommandArgs) (bool, 
 }
 
 func (p *Plugin) runCreateType(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	t := BadgeTypeDefinition{
+	t := badgesmodel.BadgeTypeDefinition{
 		CreatedBy: extra.UserId,
 	}
 
@@ -196,7 +197,7 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 		username = username[1:]
 	}
 
-	user, appErr := p.API.GetUserByUsername(username)
+	user, appErr := p.mm.User.GetByUsername(username)
 	if appErr != nil {
 		return false, &model.CommandResponse{Text: appErr.Error()}, nil
 	}
@@ -206,20 +207,24 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 		return false, &model.CommandResponse{Text: err.Error()}, nil
 	}
 
-	err = p.store.GrantBadge(BadgeID(badgeID), user.Id, extra.UserId)
+	shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeID), user.Id, extra.UserId)
 	if err != nil {
 		return false, &model.CommandResponse{Text: err.Error()}, nil
+	}
+
+	if shouldNotify {
+		p.notifyGrant(badgesmodel.BadgeID(badgeID), extra.UserId, user.Id)
 	}
 
 	return false, &model.CommandResponse{Text: "Granted"}, nil
 }
 
 func (p *Plugin) runTestAddBadge(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	b := Badge{
+	b := badgesmodel.Badge{
 		Name:        "test",
 		Description: "test",
 		Image:       "sweat_smile",
-		ImageType:   ImageTypeEmoji,
+		ImageType:   badgesmodel.ImageTypeEmoji,
 		Type:        0,
 		Multiple:    true,
 		CreatedBy:   extra.UserId,
@@ -229,16 +234,16 @@ func (p *Plugin) runTestAddBadge(args []string, extra *model.CommandArgs) (bool,
 }
 
 func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	_ = p.API.KVDeleteAll()
+	_ = p.mm.KV.DeleteAll()
 
-	t := &BadgeTypeDefinition{
+	t := &badgesmodel.BadgeTypeDefinition{
 		Name:      "Demo",
 		Frame:     "",
 		CreatedBy: extra.UserId,
-		CanGrant: PermissionScheme{
+		CanGrant: badgesmodel.PermissionScheme{
 			Everyone: true,
 		},
-		CanCreate: PermissionScheme{
+		CanCreate: badgesmodel.PermissionScheme{
 			Everyone: true,
 		},
 	}
@@ -291,11 +296,11 @@ func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (
 		},
 	}
 	for _, i := range info {
-		b := Badge{
+		b := badgesmodel.Badge{
 			Name:        i.name,
 			Description: i.description,
 			Image:       i.image,
-			ImageType:   ImageTypeEmoji,
+			ImageType:   badgesmodel.ImageTypeEmoji,
 			Type:        t.ID,
 			Multiple:    true,
 			CreatedBy:   extra.UserId,
@@ -303,42 +308,42 @@ func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (
 		_, _ = p.store.AddBadge(b)
 	}
 
-	_ = p.store.GrantBadge(0, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(1, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(2, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(1, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(3, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(0, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(5, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(3, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(1, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(3, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(5, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
-	_ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(0, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(2, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(0, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(5, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(5, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
 	return false, &model.CommandResponse{Text: "Added"}, nil
 }
 
 func (p *Plugin) runTestKV(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	_ = p.API.KVDeleteAll()
+	_ = p.mm.KV.DeleteAll()
 	for i := 0; i < 1000; i++ {
-		b := Badge{}
+		b := badgesmodel.Badge{}
 		b.Image = ":sweat_smile:"
-		b.ImageType = ImageTypeEmoji
-		for j := 0; j < NameMaxLength; j++ {
+		b.ImageType = badgesmodel.ImageTypeEmoji
+		for j := 0; j < badgesmodel.NameMaxLength; j++ {
 			b.Name += "a"
 		}
-		for j := 0; j < DescriptionMaxLength; j++ {
+		for j := 0; j < badgesmodel.DescriptionMaxLength; j++ {
 			b.Description += "a"
 		}
 		b.Type = 99
@@ -346,16 +351,16 @@ func (p *Plugin) runTestKV(args []string, extra *model.CommandArgs) (bool, *mode
 
 		_, err := p.store.AddBadge(b)
 		if err != nil {
-			p.API.LogError("WE REACHED THE LIMIT!", "limit", i, "error", err)
+			p.mm.Log.Error("WE REACHED THE LIMIT!", "limit", i, "error", err)
 			p.postCommandResponse(extra, "Error")
 			return false, &model.CommandResponse{}, nil
 		}
 	}
 
 	for i := 0; i < 1000*1000; i++ {
-		err := p.store.GrantBadge(0, extra.UserId, extra.UserId)
+		_, err := p.store.GrantBadge(0, extra.UserId, extra.UserId)
 		if err != nil {
-			p.API.LogError("WE REACHED THE LIMIT! (ownership)", "limit", i, "error", err)
+			p.mm.Log.Error("WE REACHED THE LIMIT! (ownership)", "limit", i, "error", err)
 			p.postCommandResponse(extra, "Error")
 			return false, &model.CommandResponse{}, nil
 		}
@@ -366,7 +371,7 @@ func (p *Plugin) runTestKV(args []string, extra *model.CommandArgs) (bool, *mode
 
 func (p *Plugin) runTestKVOneMore(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
 	before := time.Now()
-	_ = p.store.GrantBadge(0, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(0, extra.UserId, extra.UserId)
 	after := time.Now()
 	p.postCommandResponse(extra, fmt.Sprintf("Lasted: %s", after.Sub(before).String()))
 	return false, &model.CommandResponse{}, nil

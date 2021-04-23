@@ -1,4 +1,4 @@
-package main
+package badgesmodel
 
 import (
 	"time"
@@ -64,6 +64,17 @@ type PermissionScheme struct {
 type BadgeTypeList []BadgeTypeDefinition
 
 type ImageType string
+
+type EnsureBadgesRequest struct {
+	Badges []Badge
+	BotID  string
+}
+
+type GrantBadgeRequest struct {
+	BadgeID BadgeID
+	UserID  string
+	BotID   string
+}
 
 func (b Badge) IsValid() bool {
 	return len(b.Name) <= NameMaxLength &&

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
+	pluginapi "github.com/mattermost/mattermost-plugin-api"
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 	"github.com/pkg/errors"
@@ -21,6 +22,7 @@ type Plugin struct {
 	// setConfiguration for usage.
 	configuration *configuration
 
+	mm        *pluginapi.Client
 	BotUserID string
 	store     Store
 	router    *mux.Router
@@ -36,6 +38,7 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 
 // See https://developers.mattermost.com/extend/plugins/server/reference/
 func (p *Plugin) OnActivate() error {
+	p.mm = pluginapi.NewClient(p.API)
 	botID, err := p.Helpers.EnsureBot(&model.Bot{
 		Username:    "badges",
 		DisplayName: "Badges Bot",
@@ -48,5 +51,5 @@ func (p *Plugin) OnActivate() error {
 	p.store = NewStore(p.API)
 	p.initializeAPI()
 
-	return p.API.RegisterCommand(p.getCommand())
+	return p.mm.SlashCommand.Register(p.getCommand())
 }
