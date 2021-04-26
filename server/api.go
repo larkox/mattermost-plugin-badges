@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"runtime/debug"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/larkox/mattermost-plugin-badges/badgesmodel"
@@ -22,6 +24,8 @@ const (
 	ResponseTypeJSON ResponseType = "JSON_RESPONSE"
 	// ResponseTypePlain indicates that response type is text plain
 	ResponseTypePlain ResponseType = "TEXT_RESPONSE"
+	// ResponseTypeDialog indicates that response type is a dialog response
+	ResponseTypeDialog ResponseType = "DIALOG"
 )
 
 type APIErrorResponse struct {
@@ -37,6 +41,7 @@ func (p *Plugin) initializeAPI() {
 	apiRouter := p.router.PathPrefix("/api/v1").Subrouter()
 	pluginAPIRouter := p.router.PathPrefix(badgesmodel.PluginAPIPath).Subrouter()
 	autocompleteRouter := p.router.PathPrefix(AutocompletePath).Subrouter()
+	dialogRouter := p.router.PathPrefix(DialogPath).Subrouter()
 
 	apiRouter.HandleFunc("/getUserBadges/{userID}", p.extractUserMiddleWare(p.getUserBadges, ResponseTypeJSON)).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/getBadgeDetails/{badgeID}", p.extractUserMiddleWare(p.getBadgeDetails, ResponseTypeJSON)).Methods(http.MethodGet)
@@ -48,12 +53,142 @@ func (p *Plugin) initializeAPI() {
 	autocompleteRouter.HandleFunc(AutocompletePathBadgeSuggestions, p.extractUserMiddleWare(p.getBadgeSuggestions, ResponseTypeJSON)).Methods(http.MethodGet)
 	autocompleteRouter.HandleFunc(AutocompletePathTypeSuggestions, p.extractUserMiddleWare(p.getBadgeTypeSuggestions, ResponseTypeJSON)).Methods(http.MethodGet)
 
+	dialogRouter.HandleFunc(DialogPathCreateBadge, p.extractUserMiddleWare(p.dialogCreateBadge, ResponseTypeDialog)).Methods(http.MethodPost)
+	dialogRouter.HandleFunc(DialogPathCreateType, p.extractUserMiddleWare(p.dialogCreateType, ResponseTypeDialog)).Methods(http.MethodPost)
+
 	p.router.PathPrefix("/").HandlerFunc(p.defaultHandler)
 }
 
 func (p *Plugin) defaultHandler(w http.ResponseWriter, r *http.Request) {
 	p.mm.Log.Debug("Unexpected call", "url", r.URL)
 	w.WriteHeader(http.StatusNotFound)
+}
+
+func dialogError(w http.ResponseWriter, text string, errors map[string]string) {
+	resp := &model.SubmitDialogResponse{
+		Error:  "Error: " + text,
+		Errors: errors,
+	}
+	_, _ = w.Write(resp.ToJson())
+}
+
+func dialogOK(w http.ResponseWriter) {
+	resp := &model.SubmitDialogResponse{}
+	_, _ = w.Write(resp.ToJson())
+}
+
+func (p *Plugin) dialogCreateBadge(w http.ResponseWriter, r *http.Request, userID string) {
+	req := model.SubmitDialogRequestFromJson(r.Body)
+	if req == nil {
+		dialogError(w, "could not get the dialog request", nil)
+		return
+	}
+
+	toCreate := badgesmodel.Badge{}
+	toCreate.CreatedBy = userID
+	toCreate.ImageType = badgesmodel.ImageTypeEmoji
+	name, errText, errors := getDialogSubmissionTextField(req, DialogFieldBadgeName)
+	if errors != nil {
+		dialogError(w, errText, errors)
+		return
+	}
+	toCreate.Name = name
+
+	description, errText, errors := getDialogSubmissionTextField(req, DialogFieldBadgeDescription)
+	if errors != nil {
+		dialogError(w, errText, errors)
+		return
+	}
+	toCreate.Description = description
+
+	image, errText, errors := getDialogSubmissionTextField(req, DialogFieldBadgeImage)
+	if errors != nil {
+		dialogError(w, errText, errors)
+		return
+	}
+
+	if image[0] == ':' {
+		image = image[1 : len(image)-1]
+	}
+	if image == "" {
+		dialogError(w, "Invalid field", map[string]string{"image": "Empty emoji"})
+		return
+	}
+	toCreate.Image = image
+
+	badgeTypeStr, errText, errors := getDialogSubmissionTextField(req, DialogFieldBadgeType)
+	if errors != nil {
+		dialogError(w, errText, errors)
+		return
+	}
+
+	badgeType, err := strconv.Atoi(badgeTypeStr)
+	if err != nil {
+		dialogError(w, "Invalid field", map[string]string{"type": "Invalid type"})
+		return
+	}
+	toCreate.Type = badgesmodel.BadgeType(badgeType)
+
+	toCreate.Multiple = getDialogSubmissionBoolField(req, DialogFieldBadgeMultiple)
+
+	_, err = p.store.AddBadge(toCreate)
+	if err != nil {
+		dialogError(w, err.Error(), nil)
+		return
+	}
+
+	p.mm.Post.SendEphemeralPost(userID, &model.Post{
+		UserId:  p.BotUserID,
+		Message: fmt.Sprintf("Badge `%s` created.", toCreate.Name),
+	})
+
+	dialogOK(w)
+}
+
+func (p *Plugin) dialogCreateType(w http.ResponseWriter, r *http.Request, userID string) {
+	req := model.SubmitDialogRequestFromJson(r.Body)
+	if req == nil {
+		dialogError(w, "could not get the dialog request", nil)
+		return
+	}
+	toCreate := badgesmodel.BadgeTypeDefinition{}
+	toCreate.CreatedBy = userID
+	toCreate.CanCreate.Everyone = getDialogSubmissionBoolField(req, DialogFieldTypeEveryoneCanCreate)
+	toCreate.CanGrant.Everyone = getDialogSubmissionBoolField(req, DialogFieldTypeEveryoneCanGrant)
+	name, errText, errors := getDialogSubmissionTextField(req, DialogFieldTypeName)
+	if errors != nil {
+		dialogError(w, errText, errors)
+		return
+	}
+	toCreate.Name = name
+
+	_, err := p.store.AddType(toCreate)
+	if err != nil {
+		dialogError(w, err.Error(), nil)
+		return
+	}
+
+	p.mm.Post.SendEphemeralPost(userID, &model.Post{
+		UserId:  p.BotUserID,
+		Message: fmt.Sprintf("Type `%s` created.", toCreate.Name),
+	})
+
+	dialogOK(w)
+}
+
+func getDialogSubmissionTextField(req *model.SubmitDialogRequest, fieldName string) (value string, errText string, errors map[string]string) {
+	value, ok := req.Submission[fieldName].(string)
+	value = strings.TrimSpace(value)
+	if !ok || value == "" {
+		return "", "Invalid argument", map[string]string{fieldName: "Field empty or not recognized."}
+	}
+
+	return value, "", nil
+}
+
+func getDialogSubmissionBoolField(req *model.SubmitDialogRequest, fieldName string) bool {
+	value, _ := req.Submission[fieldName].(bool)
+	return value
 }
 
 func (p *Plugin) grantBadge(w http.ResponseWriter, r *http.Request, pluginID string) {
@@ -256,6 +391,8 @@ func (p *Plugin) extractUserMiddleWare(handler HTTPHandlerFuncWithUser, response
 				p.writeAPIError(w, &APIErrorResponse{ID: "", Message: "Not authorized.", StatusCode: http.StatusUnauthorized})
 			case ResponseTypePlain:
 				http.Error(w, "Not authorized", http.StatusUnauthorized)
+			case ResponseTypeDialog:
+				dialogError(w, "Not Authorized", nil)
 			default:
 				p.mm.Log.Error("Unknown ResponseType detected")
 			}
@@ -310,4 +447,20 @@ func (p *Plugin) writeAPIError(w http.ResponseWriter, apiErr *APIErrorResponse) 
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+}
+
+func (p *Plugin) getPluginURL() string {
+	urlP := p.mm.Configuration.GetConfig().ServiceSettings.SiteURL
+	url := "/"
+	if urlP != nil {
+		url = *urlP
+	}
+	if url[len(url)-1] == '/' {
+		url = url[0 : len(url)-1]
+	}
+	return url + "/plugins/" + manifest.Id
+}
+
+func (p *Plugin) getDialogURL() string {
+	return p.getPluginURL() + DialogPath
 }

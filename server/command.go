@@ -127,60 +127,121 @@ func (p *Plugin) runCreate(args []string, extra *model.CommandArgs) (bool, *mode
 }
 
 func (p *Plugin) runCreateBadge(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	b := badgesmodel.Badge{
-		ImageType: badgesmodel.ImageTypeEmoji,
-		CreatedBy: extra.UserId,
-	}
-	var badgeType int
-	var multiple string
-	fs := pflag.NewFlagSet("", pflag.ContinueOnError)
-	fs.StringVar(&b.Name, "name", "", "Name of the badge")
-	fs.StringVar(&b.Description, "description", "", "Description of the badge")
-	fs.StringVar(&b.Image, "image", "", "Image of the badge")
-	fs.IntVar(&badgeType, "type", 0, "Type of the badge")
-	fs.StringVar(&multiple, "multiple", "", "Whether the badge can be granted multiple times")
-	if err := fs.Parse(args); err != nil {
-		return false, &model.CommandResponse{Text: err.Error()}, nil
-	}
-
-	b.Type = badgesmodel.BadgeType(badgeType)
-	b.Multiple = multiple == TrueString
-	if b.Image[0] == ':' {
-		b.Image = b.Image[1 : len(b.Image)-1]
-	}
-
-	_, err := p.store.AddBadge(b)
+	u, err := p.mm.User.Get(extra.UserId)
 	if err != nil {
 		return false, &model.CommandResponse{Text: err.Error()}, nil
 	}
 
-	return false, &model.CommandResponse{Text: "Created"}, nil
+	typeSuggestions, err := p.store.GetTypeSuggestions(*u)
+	if err != nil {
+		return false, &model.CommandResponse{Text: err.Error()}, nil
+	}
+
+	typeOptions := []*model.PostActionOptions{}
+	for _, typeSuggestion := range typeSuggestions {
+		id := strconv.Itoa(int(typeSuggestion.ID))
+		typeOptions = append(typeOptions, &model.PostActionOptions{Text: typeSuggestion.Name, Value: id})
+	}
+
+	if len(typeOptions) == 0 {
+		return false, &model.CommandResponse{Text: "You cannot create badges from any type."}, nil
+	}
+
+	err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
+		TriggerId: extra.TriggerId,
+		URL:       p.getDialogURL() + DialogPathCreateBadge,
+		Dialog: model.Dialog{
+			Title:       "Create badge",
+			SubmitLabel: "Create",
+			Elements: []model.DialogElement{
+				{
+					DisplayName: "Name",
+					Type:        "text",
+					Name:        DialogFieldBadgeName,
+					MaxLength:   badgesmodel.NameMaxLength,
+				},
+				{
+					DisplayName: "Description",
+					Type:        "text",
+					Name:        DialogFieldBadgeDescription,
+					MaxLength:   badgesmodel.DescriptionMaxLength,
+				},
+				{
+					DisplayName: "Image",
+					Type:        "text",
+					Name:        DialogFieldBadgeImage,
+					HelpText:    "Insert a emoticon name",
+				},
+				{
+					DisplayName: "Type",
+					Type:        "select",
+					Name:        DialogFieldBadgeType,
+					Options:     typeOptions,
+				},
+				{
+					DisplayName: "Multiple",
+					Type:        "bool",
+					Name:        DialogFieldBadgeMultiple,
+					HelpText:    "Whether the badge can be granted multiple times",
+					Optional:    true,
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return false, &model.CommandResponse{Text: err.Error()}, nil
+	}
+
+	return false, &model.CommandResponse{}, nil
 }
 
 func (p *Plugin) runCreateType(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	t := badgesmodel.BadgeTypeDefinition{
-		CreatedBy: extra.UserId,
-	}
-
-	var everyoneCanGrant string
-	var everyoneCanCreate string
-	fs := pflag.NewFlagSet("", pflag.ContinueOnError)
-	fs.StringVar(&t.Name, "name", "", "Name of the type")
-	fs.StringVar(&everyoneCanCreate, "everyoneCanCreate", "", "Whether everyone can create badges of this type")
-	fs.StringVar(&everyoneCanGrant, "everyoneCanGrant", "", "Whether everyone can grant badge")
-	if err := fs.Parse(args); err != nil {
-		return false, &model.CommandResponse{Text: err.Error()}, nil
-	}
-
-	t.CanGrant.Everyone = everyoneCanGrant == TrueString
-	t.CanCreate.Everyone = everyoneCanCreate == TrueString
-
-	_, err := p.store.AddType(t)
+	u, err := p.mm.User.Get(extra.UserId)
 	if err != nil {
 		return false, &model.CommandResponse{Text: err.Error()}, nil
 	}
 
-	return false, &model.CommandResponse{Text: "Created"}, nil
+	if !canCreateType(*u, false) {
+		return false, &model.CommandResponse{Text: "You have no permissions to create a badge type."}, nil
+	}
+
+	err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
+		TriggerId: extra.TriggerId,
+		URL:       p.getDialogURL() + DialogPathCreateType,
+		Dialog: model.Dialog{
+			Title:       "Create type",
+			SubmitLabel: "Create",
+			Elements: []model.DialogElement{
+				{
+					DisplayName: "Name",
+					Type:        "text",
+					Name:        DialogFieldTypeName,
+					MaxLength:   badgesmodel.NameMaxLength,
+				},
+				{
+					DisplayName: "Everyone can create badge",
+					Type:        "bool",
+					Name:        DialogFieldTypeEveryoneCanCreate,
+					HelpText:    "Whether any user can create a badge of this type",
+					Optional:    true,
+				},
+				{
+					DisplayName: "Everyone can grant badge",
+					Type:        "bool",
+					Name:        DialogFieldTypeEveryoneCanGrant,
+					HelpText:    "Whether any user can grant a badge of this type",
+					Optional:    true,
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return false, &model.CommandResponse{Text: err.Error()}, nil
+	}
+
+	return false, &model.CommandResponse{}, nil
 }
 
 func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
@@ -389,33 +450,16 @@ func (p *Plugin) getAutocompleteData() *model.AutocompleteData {
 
 	badge := model.NewAutocompleteData(
 		"badge",
-		"--name badgeName --description badgeDescription --image :image: --type typeID --multiple true|false",
+		"",
 		"Create a badge",
 	)
-	badge.AddNamedTextArgument("name", "Name of the badge", "--name badgeName", "", true)
-	badge.AddNamedTextArgument("description", "Description of the badge", "--description description", "", true)
-	badge.AddNamedTextArgument("image", "Image of the badge", "--image :image:", "", true)
-	badge.AddNamedDynamicListArgument("type", "Type of the badge", getAutocompletePath(AutocompletePathTypeSuggestions), true)
-	badge.AddNamedStaticListArgument("multiple", "Whether the badge can be granted multiple times", true, []model.AutocompleteListItem{
-		{Item: TrueString},
-		{Item: FalseString},
-	})
 	create.AddCommand(badge)
 
 	createType := model.NewAutocompleteData(
 		"type",
-		"--name typeName --everyoneCanCreate true|false --everyoneCanGrant true|false",
+		"",
 		"Create a badge type",
 	)
-	createType.AddNamedTextArgument("name", "Name of the type", "--name typeName", "", true)
-	createType.AddNamedStaticListArgument("everyoneCanCreate", "Whether the badge can be granted by everyone", true, []model.AutocompleteListItem{
-		{Item: TrueString},
-		{Item: FalseString},
-	})
-	createType.AddNamedStaticListArgument("everyoneCanGrant", "Whether the badge can be created by everyone", true, []model.AutocompleteListItem{
-		{Item: TrueString},
-		{Item: FalseString},
-	})
 	create.AddCommand(createType)
 
 	badges.AddCommand(create)
