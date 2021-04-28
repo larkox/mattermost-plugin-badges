@@ -55,6 +55,7 @@ func (p *Plugin) initializeAPI() {
 
 	dialogRouter.HandleFunc(DialogPathCreateBadge, p.extractUserMiddleWare(p.dialogCreateBadge, ResponseTypeDialog)).Methods(http.MethodPost)
 	dialogRouter.HandleFunc(DialogPathCreateType, p.extractUserMiddleWare(p.dialogCreateType, ResponseTypeDialog)).Methods(http.MethodPost)
+	dialogRouter.HandleFunc(DialogPathGrant, p.extractUserMiddleWare(p.dialogGrant, ResponseTypeDialog)).Methods(http.MethodPost)
 
 	p.router.PathPrefix("/").HandlerFunc(p.defaultHandler)
 }
@@ -138,8 +139,9 @@ func (p *Plugin) dialogCreateBadge(w http.ResponseWriter, r *http.Request, userI
 	}
 
 	p.mm.Post.SendEphemeralPost(userID, &model.Post{
-		UserId:  p.BotUserID,
-		Message: fmt.Sprintf("Badge `%s` created.", toCreate.Name),
+		UserId:    p.BotUserID,
+		ChannelId: req.ChannelId,
+		Message:   fmt.Sprintf("Badge `%s` created.", toCreate.Name),
 	})
 
 	dialogOK(w)
@@ -169,8 +171,60 @@ func (p *Plugin) dialogCreateType(w http.ResponseWriter, r *http.Request, userID
 	}
 
 	p.mm.Post.SendEphemeralPost(userID, &model.Post{
-		UserId:  p.BotUserID,
-		Message: fmt.Sprintf("Type `%s` created.", toCreate.Name),
+		UserId:    p.BotUserID,
+		ChannelId: req.ChannelId,
+		Message:   fmt.Sprintf("Type `%s` created.", toCreate.Name),
+	})
+
+	dialogOK(w)
+}
+
+func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID string) {
+	req := model.SubmitDialogRequestFromJson(r.Body)
+	if req == nil {
+		dialogError(w, "could not get the dialog request", nil)
+		return
+	}
+
+	badgeIDStr, errText, errors := getDialogSubmissionTextField(req, DialogFieldBadge)
+	if errors != nil {
+		dialogError(w, errText, errors)
+		return
+	}
+
+	badgeID, err := strconv.Atoi(badgeIDStr)
+	if err != nil {
+		dialogError(w, "Invalid field", map[string]string{"type": "Invalid type"})
+		return
+	}
+
+	badge, err := p.store.GetBadgeDetails(badgesmodel.BadgeID(badgeID))
+	if err != nil {
+		dialogError(w, "badge not found", nil)
+		return
+	}
+
+	grantToID := req.State
+	if grantToID == "" {
+		grantToID, errText, errors = getDialogSubmissionTextField(req, DialogFieldUser)
+		if errors != nil {
+			dialogError(w, errText, errors)
+			return
+		}
+	}
+
+	grantToUser, err := p.mm.User.Get(grantToID)
+	if err != nil {
+		dialogError(w, "user not found", nil)
+		return
+	}
+
+	p.store.GrantBadge(badgesmodel.BadgeID(badgeID), grantToID, userID)
+
+	p.mm.Post.SendEphemeralPost(userID, &model.Post{
+		UserId:    p.BotUserID,
+		ChannelId: req.ChannelId,
+		Message:   fmt.Sprintf("Badge `%s` granted to @%s.", badge.Name, grantToUser.Username),
 	})
 
 	dialogOK(w)

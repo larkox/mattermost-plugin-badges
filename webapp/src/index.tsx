@@ -6,7 +6,7 @@ import {GenericAction} from 'mattermost-redux/types/actions';
 
 import React from 'react';
 
-import {setRHSView, setShowRHSAction} from 'actions/actions';
+import {openCreateBadge, openCreateType, setRHSView, setShowRHSAction} from 'actions/actions';
 
 import UserBadges from 'components/rhs';
 
@@ -39,6 +39,21 @@ export default class Plugin {
             'Badges',
             'Open your list of badges.',
         );
+
+        registry.registerMainMenuAction(
+            "Create badge",
+            () => {
+                store.dispatch(openCreateBadge() as any);
+            },
+            null,
+        )
+        registry.registerMainMenuAction(
+            "Create badge type",
+            () => {
+                store.dispatch(openCreateType() as any);
+            },
+            null,
+        )
     }
 }
 

@@ -1,3 +1,11 @@
+import {AnyAction, Dispatch} from 'redux';
+
+import {getCurrentChannel} from 'mattermost-redux/selectors/entities/channels';
+import {getCurrentTeamId} from 'mattermost-redux/selectors/entities/teams';
+import {GetStateFunc} from 'mattermost-redux/types/actions';
+import {Client4} from 'mattermost-redux/client';
+import {IntegrationTypes} from 'mattermost-redux/action_types';
+
 import ActionTypes from 'action_types/';
 import {BadgeID} from 'types/badges';
 import {RHSState} from 'types/general';
@@ -32,4 +40,69 @@ export function setRHSView(view: RHSState) {
         type: ActionTypes.RECEIVED_RHS_VIEW,
         data: view,
     };
+}
+
+export function setTriggerId(triggerId: string) {
+    return {
+        type: IntegrationTypes.RECEIVED_DIALOG_TRIGGER_ID,
+        data: triggerId,
+    };
+}
+
+export function openGrant(user?: string, badge?: string) {
+    return (dispatch: Dispatch<AnyAction>, getState: GetStateFunc) => {
+        let command = '/badges grant'
+        if (user) {
+            command += ` --user ${user}`
+        }
+
+        if (badge) {
+            command += ` --badge ${badge}`
+        }
+
+        clientExecuteCommand(dispatch, getState, command)
+
+        return {data: true}
+    }
+}
+
+export function openCreateType() {
+    return (dispatch: Dispatch<AnyAction>, getState: GetStateFunc) => {
+        let command = '/badges create type'
+        clientExecuteCommand(dispatch, getState, command)
+
+        return {data: true}
+    }
+}
+
+export function openCreateBadge() {
+    return (dispatch: Dispatch<AnyAction>, getState: GetStateFunc) => {
+        let command = '/badges create badge'
+        clientExecuteCommand(dispatch, getState, command)
+
+        return {data: true}
+    }
+}
+
+export async function clientExecuteCommand(dispatch: Dispatch<AnyAction>, getState: GetStateFunc, command: string) {
+    let currentChannel = getCurrentChannel(getState());
+    const currentTeamId = getCurrentTeamId(getState());
+
+    // Default to town square if there is no current channel (i.e., if Mattermost has not yet loaded)
+    if (!currentChannel) {
+        currentChannel = await Client4.getChannelByName(currentTeamId, 'town-square');
+    }
+
+    const args = {
+        channel_id: currentChannel?.id,
+        team_id: currentTeamId,
+    };
+
+    try {
+        //@ts-ignore Typing in mattermost-redux is wrong
+        const data = await Client4.executeCommand(command, args);
+        dispatch(setTriggerId(data?.trigger_id));
+    } catch (error) {
+        console.error(error); //eslint-disable-line no-console
+    }
 }

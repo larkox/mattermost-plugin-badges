@@ -8,7 +8,7 @@ import {GlobalState} from 'mattermost-redux/types/store';
 
 import {getCurrentUserId} from 'mattermost-redux/selectors/entities/common';
 
-import {setRHSView, setRHSBadge, setRHSUser} from '../../actions/actions';
+import {setRHSView, setRHSBadge, setRHSUser, openGrant} from '../../actions/actions';
 
 import {getShowRHS} from 'selectors';
 import {RHSState} from 'types/general';
@@ -28,6 +28,7 @@ type Actions = {
     setRHSView: (view: RHSState) => Promise<void>;
     setRHSBadge: (id: BadgeID | null) => Promise<void>;
     setRHSUser: (id: string | null) => Promise<void>;
+    openGrant: (user?: string, badge?: string) => Promise<void>
 }
 
 function mapDispatchToProps(dispatch: Dispatch) {
@@ -36,6 +37,7 @@ function mapDispatchToProps(dispatch: Dispatch) {
             setRHSView,
             setRHSBadge,
             setRHSUser,
+            openGrant,
         }, dispatch),
     };
 }

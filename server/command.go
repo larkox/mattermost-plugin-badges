@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -37,6 +38,10 @@ func (p *Plugin) postCommandResponse(args *model.CommandArgs, text string) {
 		Message:   text,
 	}
 	p.mm.Post.SendEphemeralPost(args.UserId, post)
+}
+
+func commandError(text string) (bool, *model.CommandResponse, error) {
+	return true, &model.CommandResponse{}, errors.New(text)
 }
 
 // ExecuteCommand executes a given command and returns a command response.
@@ -78,7 +83,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	isUserError, resp, err := handler(restOfArgs, args)
 	if err != nil {
 		if isUserError {
-			p.postCommandResponse(args, fmt.Sprintf("__Error: %s.__\n\nRun `/todo help` for usage instructions.", err.Error()))
+			p.postCommandResponse(args, fmt.Sprintf("__Error: %s__", err.Error()))
 		} else {
 			p.mm.Log.Error(err.Error())
 			p.postCommandResponse(args, "An unknown error occurred. Please talk to your system administrator for help.")
@@ -129,12 +134,12 @@ func (p *Plugin) runCreate(args []string, extra *model.CommandArgs) (bool, *mode
 func (p *Plugin) runCreateBadge(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
 	u, err := p.mm.User.Get(extra.UserId)
 	if err != nil {
-		return false, &model.CommandResponse{Text: err.Error()}, nil
+		return commandError(err.Error())
 	}
 
 	typeSuggestions, err := p.store.GetTypeSuggestions(*u)
 	if err != nil {
-		return false, &model.CommandResponse{Text: err.Error()}, nil
+		return commandError(err.Error())
 	}
 
 	typeOptions := []*model.PostActionOptions{}
@@ -144,7 +149,7 @@ func (p *Plugin) runCreateBadge(args []string, extra *model.CommandArgs) (bool, 
 	}
 
 	if len(typeOptions) == 0 {
-		return false, &model.CommandResponse{Text: "You cannot create badges from any type."}, nil
+		return commandError("You cannot create badges from any type.")
 	}
 
 	err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
@@ -190,7 +195,7 @@ func (p *Plugin) runCreateBadge(args []string, extra *model.CommandArgs) (bool, 
 	})
 
 	if err != nil {
-		return false, &model.CommandResponse{Text: err.Error()}, nil
+		return commandError(err.Error())
 	}
 
 	return false, &model.CommandResponse{}, nil
@@ -199,11 +204,11 @@ func (p *Plugin) runCreateBadge(args []string, extra *model.CommandArgs) (bool, 
 func (p *Plugin) runCreateType(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
 	u, err := p.mm.User.Get(extra.UserId)
 	if err != nil {
-		return false, &model.CommandResponse{Text: err.Error()}, nil
+		return commandError(err.Error())
 	}
 
 	if !canCreateType(*u, false) {
-		return false, &model.CommandResponse{Text: "You have no permissions to create a badge type."}, nil
+		return commandError("You have no permissions to create a badge type.")
 	}
 
 	err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
@@ -238,7 +243,7 @@ func (p *Plugin) runCreateType(args []string, extra *model.CommandArgs) (bool, *
 	})
 
 	if err != nil {
-		return false, &model.CommandResponse{Text: err.Error()}, nil
+		return commandError(err.Error())
 	}
 
 	return false, &model.CommandResponse{}, nil
@@ -251,33 +256,126 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 	fs.StringVar(&badgeStr, "badge", "", "ID of the badge")
 	fs.StringVar(&username, "user", "", "Username to grant to")
 	if err := fs.Parse(args); err != nil {
-		return false, &model.CommandResponse{Text: err.Error()}, nil
+		return commandError(err.Error())
 	}
 
-	if username[0] == '@' {
-		username = username[1:]
+	if username != "" && badgeStr != "" {
+		if username[0] == '@' {
+			username = username[1:]
+		}
+
+		user, err := p.mm.User.GetByUsername(username)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		badgeID, err := strconv.Atoi(badgeStr)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeID), user.Id, extra.UserId)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		if shouldNotify {
+			p.notifyGrant(badgesmodel.BadgeID(badgeID), extra.UserId, user.Id)
+		}
+
+		p.postCommandResponse(extra, "Granted")
+		return false, &model.CommandResponse{}, nil
 	}
 
-	user, appErr := p.mm.User.GetByUsername(username)
-	if appErr != nil {
-		return false, &model.CommandResponse{Text: appErr.Error()}, nil
+	elements := []model.DialogElement{}
+
+	stateText := ""
+	introductionText := ""
+	if username != "" {
+
+		if username[0] == '@' {
+			username = username[1:]
+		}
+
+		user, err := p.mm.User.GetByUsername(username)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		introductionText = "Grant badge to @" + username
+		stateText = user.Id
 	}
 
-	badgeID, err := strconv.Atoi(badgeStr)
+	if stateText == "" {
+		elements = append(elements, model.DialogElement{
+			DisplayName: "User",
+			Type:        "select",
+			Name:        DialogFieldUser,
+			DataSource:  "users",
+		})
+	}
+
+	actingUser, err := p.mm.User.Get(extra.UserId)
 	if err != nil {
-		return false, &model.CommandResponse{Text: err.Error()}, nil
+		return commandError(err.Error())
 	}
 
-	shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeID), user.Id, extra.UserId)
+	options := []*model.PostActionOptions{}
+	grantableBadges, err := p.store.GetGrantSuggestions(*actingUser)
 	if err != nil {
-		return false, &model.CommandResponse{Text: err.Error()}, nil
+		return commandError(err.Error())
+	}
+	for _, badge := range grantableBadges {
+		options = append(options, &model.PostActionOptions{Text: badge.Name, Value: strconv.Itoa(int(badge.ID))})
 	}
 
-	if shouldNotify {
-		p.notifyGrant(badgesmodel.BadgeID(badgeID), extra.UserId, user.Id)
+	badgeElement := model.DialogElement{
+		DisplayName: "Badge",
+		Type:        "select",
+		Name:        DialogFieldBadge,
+		Options:     options,
 	}
 
-	return false, &model.CommandResponse{Text: "Granted"}, nil
+	if badgeStr != "" {
+		badgeID, err := strconv.Atoi(badgeStr)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		found := false
+		for _, badge := range grantableBadges {
+			if badgeID == int(badge.ID) {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return commandError("You cannot grant that badge")
+		}
+
+		badgeElement.Default = badgeStr
+	}
+
+	elements = append(elements, badgeElement)
+
+	err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
+		TriggerId: extra.TriggerId,
+		URL:       p.getDialogURL() + DialogPathGrant,
+		Dialog: model.Dialog{
+			Title:            "Grant badge",
+			IntroductionText: introductionText,
+			SubmitLabel:      "Grant",
+			Elements:         elements,
+			State:            stateText,
+		},
+	})
+
+	if err != nil {
+		return commandError(err.Error())
+	}
+
+	return false, &model.CommandResponse{}, nil
 }
 
 func (p *Plugin) runTestAddBadge(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {

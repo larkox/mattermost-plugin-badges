@@ -12,6 +12,7 @@ const (
 	DialogPath            = "/dialog"
 	DialogPathCreateBadge = "/createBadge"
 	DialogPathCreateType  = "/createType"
+	DialogPathGrant       = "/grant"
 
 	DialogFieldBadgeName             = "name"
 	DialogFieldBadgeMultiple         = "multiple"
@@ -21,6 +22,8 @@ const (
 	DialogFieldTypeName              = "name"
 	DialogFieldTypeEveryoneCanGrant  = "everyoneCanGrant"
 	DialogFieldTypeEveryoneCanCreate = "everyoneCanCreate"
+	DialogFieldUser                  = "user"
+	DialogFieldBadge                 = "badge"
 
 	TrueString  = "true"
 	FalseString = "false"
