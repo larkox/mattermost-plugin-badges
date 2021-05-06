@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/larkox/mattermost-plugin-badges/badgesmodel"
 	commandparser "github.com/larkox/mattermost-plugin-badges/server/command_parser"
@@ -60,18 +58,10 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		restOfArgs = stringArgs[2:]
 	}
 	switch command {
-	case "test-kv":
-		handler = p.runTestKV
-	case "test-kv-one-more":
-		handler = p.runTestKVOneMore
 	case "test-clean":
 		handler = p.runClean
-	case "test-add-badge":
-		handler = p.runTestAddBadge
 	case "test-initial-badges":
 		handler = p.runTestInitialBadges
-	case "test-list-types":
-		handler = p.runTestListTypes
 	case "grant":
 		handler = p.runGrant
 	case "create":
@@ -95,12 +85,6 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	}
 
 	return &model.CommandResponse{}, nil
-}
-
-func (p *Plugin) runTestListTypes(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	t := p.store.DebugGetTypes()
-	b, _ := json.MarshalIndent(t, "", "    ")
-	return false, &model.CommandResponse{Text: "```\n" + string(b) + "\n```"}, nil
 }
 
 func (p *Plugin) runClean(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
@@ -378,20 +362,6 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 	return false, &model.CommandResponse{}, nil
 }
 
-func (p *Plugin) runTestAddBadge(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	b := badgesmodel.Badge{
-		Name:        "test",
-		Description: "test",
-		Image:       "sweat_smile",
-		ImageType:   badgesmodel.ImageTypeEmoji,
-		Type:        0,
-		Multiple:    true,
-		CreatedBy:   extra.UserId,
-	}
-	_, _ = p.store.AddBadge(b)
-	return false, &model.CommandResponse{Text: "Added"}, nil
-}
-
 func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
 	_ = p.mm.KV.DeleteAll()
 
@@ -491,49 +461,6 @@ func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (
 	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
 	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
 	return false, &model.CommandResponse{Text: "Added"}, nil
-}
-
-func (p *Plugin) runTestKV(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	_ = p.mm.KV.DeleteAll()
-	for i := 0; i < 1000; i++ {
-		b := badgesmodel.Badge{}
-		b.Image = ":sweat_smile:"
-		b.ImageType = badgesmodel.ImageTypeEmoji
-		for j := 0; j < badgesmodel.NameMaxLength; j++ {
-			b.Name += "a"
-		}
-		for j := 0; j < badgesmodel.DescriptionMaxLength; j++ {
-			b.Description += "a"
-		}
-		b.Type = 99
-		b.Multiple = true
-
-		_, err := p.store.AddBadge(b)
-		if err != nil {
-			p.mm.Log.Error("WE REACHED THE LIMIT!", "limit", i, "error", err)
-			p.postCommandResponse(extra, "Error")
-			return false, &model.CommandResponse{}, nil
-		}
-	}
-
-	for i := 0; i < 1000*1000; i++ {
-		_, err := p.store.GrantBadge(0, extra.UserId, extra.UserId)
-		if err != nil {
-			p.mm.Log.Error("WE REACHED THE LIMIT! (ownership)", "limit", i, "error", err)
-			p.postCommandResponse(extra, "Error")
-			return false, &model.CommandResponse{}, nil
-		}
-	}
-	p.postCommandResponse(extra, "allfine")
-	return false, &model.CommandResponse{}, nil
-}
-
-func (p *Plugin) runTestKVOneMore(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	before := time.Now()
-	_, _ = p.store.GrantBadge(0, extra.UserId, extra.UserId)
-	after := time.Now()
-	p.postCommandResponse(extra, fmt.Sprintf("Lasted: %s", after.Sub(before).String()))
-	return false, &model.CommandResponse{}, nil
 }
 
 func (p *Plugin) getAutocompleteData() *model.AutocompleteData {
