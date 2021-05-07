@@ -76,13 +76,10 @@ class BadgeList extends React.PureComponent<Props, State> {
 
     onGrantClick = () => {
         this.props.actions.openGrant(this.props.user.username)
+        this.props.hide();
     }
 
     render() {
-        if (!this.state.badges || this.state.badges.length === 0) {
-            return null;
-        }
-
         const nBadges = this.state.badges?.length || 0;
         const toShow = nBadges < MAX_BADGES ? nBadges : MAX_BADGES;
 

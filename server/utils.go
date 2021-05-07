@@ -95,9 +95,9 @@ func dumpObject(o interface{}) {
 	fmt.Println(string(b))
 }
 
-func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter, granted string) {
+func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, granted *model.User, inChannel bool, channelID string) {
 	b, errBadge := p.store.GetBadgeDetails(badgeID)
-	u, errUser := p.mm.User.Get(granter)
+	granterUser, errUser := p.mm.User.Get(granter)
 	if errBadge != nil {
 		p.mm.Log.Debug("badge error", "err", errBadge)
 	}
@@ -105,11 +105,21 @@ func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter, granted strin
 		p.mm.Log.Debug("user error", "err", errUser)
 	}
 	if errBadge == nil && errUser == nil {
-		err := p.mm.Post.DM(p.BotUserID, granted, &model.Post{
-			Message: fmt.Sprintf("@%s granted you the `%s` badge.", u.Username, b.Name),
+		err := p.mm.Post.DM(p.BotUserID, granted.Id, &model.Post{
+			Message: fmt.Sprintf("@%s granted you the `%s` badge.", granterUser.Username, b.Name),
 		})
 		if err != nil {
 			p.mm.Log.Debug("dm error", "err", err)
+		}
+		if inChannel {
+			err := p.mm.Post.CreatePost(&model.Post{
+				UserId:    p.BotUserID,
+				ChannelId: channelID,
+				Message:   fmt.Sprintf("@%s granted @%s the `%s` badge.", granterUser.Username, granted.Username, b.Name),
+			})
+			if err != nil {
+				p.mm.Log.Debug("notify here error", "err", err)
+			}
 		}
 	}
 }

@@ -192,6 +192,8 @@ func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID stri
 		return
 	}
 
+	notifyHere := getDialogSubmissionBoolField(req, DialogFieldNotifyHere)
+
 	badgeID, err := strconv.Atoi(badgeIDStr)
 	if err != nil {
 		dialogError(w, "Invalid field", map[string]string{"type": "Invalid type"})
@@ -219,7 +221,20 @@ func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID stri
 		return
 	}
 
-	p.store.GrantBadge(badgesmodel.BadgeID(badgeID), grantToID, userID)
+	shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeID), grantToID, userID)
+	if err != nil {
+		p.writeAPIError(w, &APIErrorResponse{
+			ID:         "cannot grant badge",
+			Message:    err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		})
+		return
+	}
+
+	if shouldNotify {
+		p.notifyGrant(badgesmodel.BadgeID(badgeID), userID, grantToUser, notifyHere, req.ChannelId)
+
+	}
 
 	p.mm.Post.SendEphemeralPost(userID, &model.Post{
 		UserId:    p.BotUserID,
@@ -277,8 +292,10 @@ func (p *Plugin) grantBadge(w http.ResponseWriter, r *http.Request, pluginID str
 		return
 	}
 	if shouldNotify {
-		p.mm.Log.Debug("Notifying") //DEBUG
-		p.notifyGrant(req.BadgeID, req.BotID, req.UserID)
+		u, err := p.mm.User.Get(req.UserID)
+		if err == nil {
+			p.notifyGrant(req.BadgeID, req.BotID, u, false, "")
+		}
 	}
 
 	w.Write([]byte("OK"))

@@ -24,6 +24,7 @@ const (
 	DialogFieldTypeEveryoneCanCreate = "everyoneCanCreate"
 	DialogFieldUser                  = "user"
 	DialogFieldBadge                 = "badge"
+	DialogFieldNotifyHere            = "notify_here"
 
 	TrueString  = "true"
 	FalseString = "false"

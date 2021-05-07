@@ -264,7 +264,7 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 		}
 
 		if shouldNotify {
-			p.notifyGrant(badgesmodel.BadgeID(badgeID), extra.UserId, user.Id)
+			p.notifyGrant(badgesmodel.BadgeID(badgeID), extra.UserId, user, false, "")
 		}
 
 		p.postCommandResponse(extra, "Granted")
@@ -342,6 +342,14 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 	}
 
 	elements = append(elements, badgeElement)
+
+	elements = append(elements, model.DialogElement{
+		DisplayName: "Notify on this channel",
+		Name:        DialogFieldNotifyHere,
+		Type:        "bool",
+		HelpText:    "If you mark this, the bot will send a message to this channel notifying that you granted this badge to this person.",
+		Optional:    true,
+	})
 
 	err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
 		TriggerId: extra.TriggerId,
