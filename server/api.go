@@ -164,6 +164,43 @@ func (p *Plugin) dialogCreateType(w http.ResponseWriter, r *http.Request, userID
 	}
 	toCreate.Name = name
 
+	createAllowList, _ := req.Submission[DialogFieldTypeAllowlistCanCreate].(string)
+	grantAllowList, _ := req.Submission[DialogFieldTypeAllowlistCanGrant].(string)
+
+	if createAllowList != "" {
+		toCreate.CanCreate.AllowList = map[string]bool{}
+		usernames := strings.Split(createAllowList, ",")
+		for _, username := range usernames {
+			username = strings.TrimSpace(username)
+			if username == "" {
+				continue
+			}
+			u, err := p.mm.User.GetByUsername(username)
+			if err != nil {
+				dialogError(w, "Cannot find user", map[string]string{DialogFieldTypeAllowlistCanCreate: fmt.Sprintf("Error getting user %s. Error: %v", username, err)})
+				return
+			}
+			toCreate.CanCreate.AllowList[u.Id] = true
+		}
+	}
+
+	if grantAllowList != "" {
+		toCreate.CanCreate.AllowList = map[string]bool{}
+		usernames := strings.Split(createAllowList, ",")
+		for _, username := range usernames {
+			username = strings.TrimSpace(username)
+			if username == "" {
+				continue
+			}
+			u, err := p.mm.User.GetByUsername(username)
+			if err != nil {
+				dialogError(w, "Cannot find user", map[string]string{DialogFieldTypeAllowlistCanGrant: fmt.Sprintf("Error getting user %s. Error: %v", username, err)})
+				return
+			}
+			toCreate.CanGrant.AllowList[u.Id] = true
+		}
+	}
+
 	_, err := p.store.AddType(toCreate)
 	if err != nil {
 		dialogError(w, err.Error(), nil)
