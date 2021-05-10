@@ -39,6 +39,7 @@ const AllBadgesRow: React.FC<Props> = ({badge, onClick}: Props) => {
             <div>
                 <div className='badge-name'>{badge.name}</div>
                 <div className='badge-description'>{markdown(badge.description)}</div>
+                <div className='badge-type'>{'Type: ' + badge.type_name}</div>
                 <div className='granted-by'>{getGrantedText(badge)}</div>
             </div>
         </div>

@@ -79,6 +79,14 @@ func canCreateBadge(user model.User, badgeType badgesmodel.BadgeTypeDefinition) 
 	return badgeType.CanCreate.Everyone
 }
 
+func canEditType(user model.User, badgeType badgesmodel.BadgeTypeDefinition) bool {
+	return user.IsSystemAdmin()
+}
+
+func canEditBadge(user model.User, badge badgesmodel.Badge) bool {
+	return user.IsSystemAdmin() || user.Id == badge.CreatedBy
+}
+
 func canCreateType(user model.User, isPlugin bool) bool {
 	if isPlugin {
 		return true
@@ -122,4 +130,11 @@ func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, grante
 			}
 		}
 	}
+}
+
+func getBooleanString(in bool) string {
+	if in {
+		return "true"
+	}
+	return "false"
 }

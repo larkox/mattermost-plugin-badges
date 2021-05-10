@@ -21,12 +21,20 @@ type Store interface {
 
 	// Autocomplete
 	GetGrantSuggestions(user model.User) ([]badgesmodel.Badge, error)
+	GetEditTypeSuggestions(user model.User) (badgesmodel.BadgeTypeList, error)
 	GetTypeSuggestions(user model.User) (badgesmodel.BadgeTypeList, error)
+	GetEditBadgeSuggestions(user model.User) ([]badgesmodel.Badge, error)
 
 	// API
 	AddBadge(badge badgesmodel.Badge) (*badgesmodel.Badge, error)
 	GrantBadge(badgeID badgesmodel.BadgeID, userID string, grantedBy string) (bool, error)
 	AddType(t badgesmodel.BadgeTypeDefinition) (*badgesmodel.BadgeTypeDefinition, error)
+	GetType(tID badgesmodel.BadgeType) (*badgesmodel.BadgeTypeDefinition, error)
+	GetBadge(badgeID badgesmodel.BadgeID) (*badgesmodel.Badge, error)
+	UpdateType(t badgesmodel.BadgeTypeDefinition) error
+	UpdateBadge(b badgesmodel.Badge) error
+	DeleteType(tID badgesmodel.BadgeType) error
+	DeleteBadge(bID badgesmodel.BadgeID) error
 
 	// PAPI
 	EnsureBadges(badges []badgesmodel.Badge, pluginID, botID string) ([]badgesmodel.Badge, error)
@@ -218,6 +226,12 @@ func (s *store) GetAllBadges() ([]badgesmodel.AllBadgesBadge, error) {
 				grantedTo[o.User] = true
 			}
 		}
+
+		badge.TypeName = "unknown"
+		t, err := s.GetType(badge.Type)
+		if err == nil {
+			badge.TypeName = t.Name
+		}
 		out = append(out, badge)
 	}
 
@@ -260,6 +274,38 @@ func (s *store) GetTypeSuggestions(user model.User) (badgesmodel.BadgeTypeList, 
 	for _, t := range types {
 		if canCreateBadge(user, t) {
 			out = append(out, t)
+		}
+	}
+
+	return out, nil
+}
+
+func (s *store) GetEditTypeSuggestions(user model.User) (badgesmodel.BadgeTypeList, error) {
+	types, err := s.getAllTypes()
+	if err != nil {
+		return nil, err
+	}
+
+	out := badgesmodel.BadgeTypeList{}
+	for _, t := range types {
+		if canEditType(user, t) {
+			out = append(out, t)
+		}
+	}
+
+	return out, nil
+}
+
+func (s *store) GetEditBadgeSuggestions(user model.User) ([]badgesmodel.Badge, error) {
+	bb, err := s.getAllBadges()
+	if err != nil {
+		return nil, err
+	}
+
+	out := []badgesmodel.Badge{}
+	for _, b := range bb {
+		if canEditBadge(user, b) {
+			out = append(out, b)
 		}
 	}
 
@@ -332,10 +378,16 @@ func (s *store) GetBadgeDetails(id badgesmodel.BadgeID) (*badgesmodel.BadgeDetai
 		}
 	}
 
+	typeName := "unknown"
+	t, err := s.GetType(badge.Type)
+	if err == nil {
+		typeName = t.Name
+	}
 	return &badgesmodel.BadgeDetails{
 		Badge:             *badge,
 		Owners:            owners,
 		CreatedByUsername: createdByName,
+		TypeName:          typeName,
 	}, nil
 }
 
@@ -447,11 +499,192 @@ func (s *store) GetUserBadges(userID string) ([]badgesmodel.UserBadge, error) {
 				}
 			}
 
-			out = append([]badgesmodel.UserBadge{{Badge: *badge, Ownership: o, GrantedByUsername: grantedByName}}, out...)
+			typeName := "unknown"
+			t, err := s.GetType(badge.Type)
+			if err == nil {
+				typeName = t.Name
+			}
+
+			out = append([]badgesmodel.UserBadge{{Badge: *badge, Ownership: o, GrantedByUsername: grantedByName, TypeName: typeName}}, out...)
 		}
 	}
 
 	return out, nil
+}
+
+func (s *store) GetType(tID badgesmodel.BadgeType) (*badgesmodel.BadgeTypeDefinition, error) {
+	tt, err := s.getAllTypes()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, t := range tt {
+		if t.ID == tID {
+			return &t, nil
+		}
+	}
+
+	return nil, errors.New("not found")
+}
+
+func (s *store) GetBadge(badgeID badgesmodel.BadgeID) (*badgesmodel.Badge, error) {
+	return s.getBadge(badgeID)
+}
+
+func (s *store) UpdateType(b badgesmodel.BadgeTypeDefinition) error {
+	bb, err := s.getAllTypes()
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for i, bOld := range bb {
+		if bOld.ID == b.ID {
+			bb[i] = b
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("not found")
+	}
+
+	data, err := json.Marshal(bb)
+	if err != nil {
+		return err
+	}
+
+	appErr := s.api.KVSet(KVKeyTypes, data)
+	if appErr != nil {
+		return appErr
+	}
+
+	return nil
+}
+
+func (s *store) UpdateBadge(t badgesmodel.Badge) error {
+	tt, err := s.getAllBadges()
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for i, tOld := range tt {
+		if tOld.ID == t.ID {
+			tt[i] = t
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("not found")
+	}
+
+	data, err := json.Marshal(tt)
+	if err != nil {
+		return err
+	}
+
+	appErr := s.api.KVSet(KVKeyBadges, data)
+	if appErr != nil {
+		return appErr
+	}
+
+	return nil
+}
+
+func (s *store) DeleteType(tID badgesmodel.BadgeType) error {
+	tt, err := s.getAllTypes()
+	if err != nil {
+		return err
+	}
+
+	for i, t := range tt {
+		if t.ID == tID {
+			tt = append(tt[:i], tt[i+1:]...)
+			break
+		}
+	}
+
+	data, err := json.Marshal(tt)
+	if err != nil {
+		return err
+	}
+
+	appErr := s.api.KVSet(KVKeyTypes, data)
+	if appErr != nil {
+		return appErr
+	}
+
+	bb, err := s.getAllBadges()
+	if err != nil {
+		return err
+	}
+
+	for _, b := range bb {
+		if b.Type == tID {
+			s.api.LogDebug("Deleting badge", "name", b.Name)
+			err := s.DeleteBadge(b.ID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+func (s *store) DeleteBadge(bID badgesmodel.BadgeID) error {
+	bb, err := s.getAllBadges()
+	if err != nil {
+		return err
+	}
+
+	for i, b := range bb {
+		if b.ID == bID {
+			bb = append(bb[:i], bb[i+1:]...)
+			break
+		}
+	}
+
+	data, err := json.Marshal(bb)
+	if err != nil {
+		return err
+	}
+
+	appErr := s.api.KVSet(KVKeyBadges, data)
+	if appErr != nil {
+		return appErr
+	}
+
+	ownership, err := s.getOwnershipList()
+	if err != nil {
+		return err
+	}
+
+	toDelete := []int{}
+	for i, o := range ownership {
+		if o.Badge == bID {
+			toDelete = append([]int{i}, toDelete...)
+		}
+	}
+
+	for _, index := range toDelete {
+		ownership = append(ownership[:index], ownership[index+1:]...)
+	}
+
+	data, err = json.Marshal(ownership)
+	if err != nil {
+		return err
+	}
+
+	appErr = s.api.KVSet(KVKeyOwnership, data)
+	if appErr != nil {
+		return appErr
+	}
+
+	return nil
 }
 
 func (s *store) getBadgeFromList(badgeID badgesmodel.BadgeID, list []badgesmodel.Badge) (*badgesmodel.Badge, error) {

@@ -20,14 +20,19 @@ export type BadgeID = number;
 export type BadgeType = number
 export type BadgeImageType = string;
 
-export type UserBadge = Badge & Ownership & {granted_by_name: string};
+export type UserBadge = Badge & Ownership & {
+    granted_by_name: string;
+    type_name: string;
+};
 export type BadgeDetails = Badge & {
     owners: OwnershipList;
     created_by_username: string;
+    type_name: string;
 }
 export type AllBadgesBadge = Badge & {
     granted: number;
     granted_times: number;
+    type_name: string;
 }
 
 export type OwnershipList = Ownership[]

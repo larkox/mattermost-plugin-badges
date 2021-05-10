@@ -26,6 +26,7 @@ const UserBadgeRow: React.FC<Props> = ({badge, onClick}: Props) => {
             <div className='user-badge-text'>
                 <div className='user-badge-name'>{badge.name}</div>
                 <div className='user-badge-description'>{markdown(badge.description)}</div>
+                <div className='badge-type'>{'Type: ' + badge.type_name}</div>
                 <div className='user-badge-granted-by'>{`Granted by: ${badge.granted_by_name}`}</div>
                 <div className='user-badge-granted-at'>{`Granted at: ${time.toDateString()}`}</div>
             </div>

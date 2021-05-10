@@ -135,6 +135,7 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
                     <div className='badge-text'>
                         <div className='badge-name'>{badge.name}</div>
                         <div className='badge-description'>{markdown(badge.description)}</div>
+                        <div className='badge-type'>{'Type: ' + badge.type_name}</div>
                         <div className='created-by'>{`Created by: ${badge.created_by_username}`}</div>
                     </div>
                 </div>
