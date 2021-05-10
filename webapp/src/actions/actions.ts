@@ -84,6 +84,24 @@ export function openCreateBadge() {
     }
 }
 
+export function openAddSubscription() {
+    return (dispatch: Dispatch<AnyAction>, getState: GetStateFunc) => {
+        let command = '/badges subscription create'
+        clientExecuteCommand(dispatch, getState, command)
+
+        return {data: true}
+    }
+}
+
+export function openRemoveSubscription() {
+    return (dispatch: Dispatch<AnyAction>, getState: GetStateFunc) => {
+        let command = '/badges subscription remove'
+        clientExecuteCommand(dispatch, getState, command)
+
+        return {data: true}
+    }
+}
+
 export async function clientExecuteCommand(dispatch: Dispatch<AnyAction>, getState: GetStateFunc, command: string) {
     let currentChannel = getCurrentChannel(getState());
     const currentTeamId = getCurrentTeamId(getState());

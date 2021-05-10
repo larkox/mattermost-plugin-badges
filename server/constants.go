@@ -1,9 +1,10 @@
 package main
 
 const (
-	KVKeyBadges    = "badges"
-	KVKeyOwnership = "ownership"
-	KVKeyTypes     = "types"
+	KVKeyBadges        = "badges"
+	KVKeyOwnership     = "ownership"
+	KVKeyTypes         = "types"
+	KVKeySubscriptions = "subs"
 
 	AutocompletePath                     = "/autocomplete"
 	AutocompletePathBadgeSuggestions     = "/getBadgeSuggestions"
@@ -11,14 +12,16 @@ const (
 	AutocompletePathEditBadgeSuggestions = "/getEditBadgeSuggestions"
 	AutocompletePathEditTypeSuggestions  = "/getEditTypeSuggestions"
 
-	DialogPath            = "/dialog"
-	DialogPathCreateBadge = "/createBadge"
-	DialogPathSelectType  = "/selectType"
-	DialogPathCreateType  = "/createType"
-	DialogPathEditType    = "/editType"
-	DialogPathGrant       = "/grant"
-	DialogPathSelectBadge = "/selectBadge"
-	DialogPathEditBadge   = "/editBadge"
+	DialogPath                   = "/dialog"
+	DialogPathCreateBadge        = "/createBadge"
+	DialogPathSelectType         = "/selectType"
+	DialogPathCreateType         = "/createType"
+	DialogPathEditType           = "/editType"
+	DialogPathGrant              = "/grant"
+	DialogPathSelectBadge        = "/selectBadge"
+	DialogPathEditBadge          = "/editBadge"
+	DialogPathCreateSubscription = "/createSubscription"
+	DialogPathDeleteSubscription = "/deleteSubscription"
 
 	DialogFieldBadgeName              = "name"
 	DialogFieldBadgeMultiple          = "multiple"

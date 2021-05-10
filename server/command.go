@@ -68,6 +68,8 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		handler = p.runEdit
 	case "create":
 		handler = p.runCreate
+	case "subscription":
+		handler = p.runSubscription
 	default:
 		p.postCommandResponse(args, getHelp())
 		return &model.CommandResponse{}, nil
@@ -727,6 +729,161 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 	return false, &model.CommandResponse{}, nil
 }
 
+func (p *Plugin) runSubscription(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
+	lengthOfArgs := len(args)
+	restOfArgs := []string{}
+	var handler func([]string, *model.CommandArgs) (bool, *model.CommandResponse, error)
+	if lengthOfArgs == 0 {
+		return false, &model.CommandResponse{Text: "Specify what you want to do."}, nil
+	}
+	command := args[0]
+	if lengthOfArgs > 1 {
+		restOfArgs = args[1:]
+	}
+	switch command {
+	case "create":
+		handler = p.runCreateSubscription
+	case "remove":
+		handler = p.runDeleteSubscription
+	default:
+		return false, &model.CommandResponse{Text: "You can either create or delete subscriptions"}, nil
+	}
+
+	return handler(restOfArgs, extra)
+}
+
+func (p *Plugin) runCreateSubscription(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
+	typeStr := ""
+	fs := pflag.NewFlagSet("", pflag.ContinueOnError)
+	fs.StringVar(&typeStr, "type", "", "ID of the badge")
+	if err := fs.Parse(args); err != nil {
+		return commandError(err.Error())
+	}
+
+	actingUser, err := p.mm.User.Get(extra.UserId)
+	if err != nil {
+		return commandError(err.Error())
+	}
+
+	if !canCreateSubscription(*actingUser, extra.ChannelId) {
+		return commandError("You cannot create subscriptions")
+	}
+
+	if typeStr != "" {
+		typeID, err := strconv.Atoi(typeStr)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		err = p.store.AddSubscription(badgesmodel.BadgeType(typeID), extra.ChannelId)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		p.postCommandResponse(extra, "Granted")
+		return false, &model.CommandResponse{}, nil
+	}
+
+	options := []*model.PostActionOptions{}
+	typesDefinitions, err := p.store.GetEditTypeSuggestions(*actingUser)
+	if err != nil {
+		return commandError(err.Error())
+	}
+	for _, typeDefinition := range typesDefinitions {
+		options = append(options, &model.PostActionOptions{Text: typeDefinition.Name, Value: strconv.Itoa(int(typeDefinition.ID))})
+	}
+
+	err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
+		TriggerId: extra.TriggerId,
+		URL:       p.getDialogURL() + DialogPathCreateSubscription,
+		Dialog: model.Dialog{
+			Title:            "Create subscription",
+			IntroductionText: "Introduce the badge type you want to subscribe to this channel.",
+			SubmitLabel:      "Add",
+			Elements: []model.DialogElement{
+				{
+					DisplayName: "Type",
+					Type:        "select",
+					Name:        DialogFieldBadgeType,
+					Options:     options,
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return commandError(err.Error())
+	}
+
+	return false, &model.CommandResponse{}, nil
+}
+
+func (p *Plugin) runDeleteSubscription(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
+	typeStr := ""
+	fs := pflag.NewFlagSet("", pflag.ContinueOnError)
+	fs.StringVar(&typeStr, "type", "", "ID of the badge")
+	if err := fs.Parse(args); err != nil {
+		return commandError(err.Error())
+	}
+
+	actingUser, err := p.mm.User.Get(extra.UserId)
+	if err != nil {
+		return commandError(err.Error())
+	}
+
+	if !canCreateSubscription(*actingUser, extra.ChannelId) {
+		return commandError("You cannot create subscriptions")
+	}
+
+	if typeStr != "" {
+		typeID, err := strconv.Atoi(typeStr)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		err = p.store.RemoveSubscriptions(badgesmodel.BadgeType(typeID), extra.ChannelId)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		p.postCommandResponse(extra, "Removed")
+		return false, &model.CommandResponse{}, nil
+	}
+
+	options := []*model.PostActionOptions{}
+	typesDefinitions, err := p.store.GetChannelSubscriptions(extra.ChannelId)
+	if err != nil {
+		return commandError(err.Error())
+	}
+	for _, typeDefinition := range typesDefinitions {
+		options = append(options, &model.PostActionOptions{Text: typeDefinition.Name, Value: strconv.Itoa(int(typeDefinition.ID))})
+	}
+
+	err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
+		TriggerId: extra.TriggerId,
+		URL:       p.getDialogURL() + DialogPathDeleteSubscription,
+		Dialog: model.Dialog{
+			Title:            "Delete subscription",
+			IntroductionText: "Introduce the badge type you want to remove from this channel.",
+			SubmitLabel:      "Remove",
+			Elements: []model.DialogElement{
+				{
+					DisplayName: "Type",
+					Type:        "select",
+					Name:        DialogFieldBadgeType,
+					Options:     options,
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return commandError(err.Error())
+	}
+
+	return false, &model.CommandResponse{}, nil
+}
+
 func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
 	_ = p.mm.KV.DeleteAll()
 
@@ -873,6 +1030,25 @@ func (p *Plugin) getAutocompleteData() *model.AutocompleteData {
 	edit.AddCommand(editType)
 
 	badges.AddCommand(edit)
+
+	subscription := model.NewAutocompleteData("subscription", "create | remove", "Manage this channel subscriptions")
+
+	createSubscription := model.NewAutocompleteData(
+		"create",
+		"",
+		"Create a subscription",
+	)
+	subscription.AddCommand(createSubscription)
+
+	deleteSubscription := model.NewAutocompleteData(
+		"remove",
+		"",
+		"Remove a subscription",
+	)
+	subscription.AddCommand(deleteSubscription)
+
+	badges.AddCommand(subscription)
+
 	return badges
 }
 

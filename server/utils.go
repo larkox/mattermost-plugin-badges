@@ -95,6 +95,10 @@ func canCreateType(user model.User, isPlugin bool) bool {
 	return user.IsSystemAdmin()
 }
 
+func canCreateSubscription(user model.User, channelID string) bool {
+	return user.IsSystemAdmin()
+}
+
 func dumpObject(o interface{}) {
 	b, err := json.MarshalIndent(o, "", "    ")
 	if err != nil {
@@ -112,6 +116,9 @@ func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, grante
 	if errUser != nil {
 		p.mm.Log.Debug("user error", "err", errUser)
 	}
+
+	subs, _ := p.store.GetTypeSubscriptions(b.Type)
+
 	if errBadge == nil && errUser == nil {
 		err := p.mm.Post.DM(p.BotUserID, granted.Id, &model.Post{
 			Message: fmt.Sprintf("@%s granted you the `%s` badge.", granterUser.Username, b.Name),
@@ -119,12 +126,23 @@ func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, grante
 		if err != nil {
 			p.mm.Log.Debug("dm error", "err", err)
 		}
+		basePost := model.Post{
+			UserId:    p.BotUserID,
+			ChannelId: channelID,
+			Message:   fmt.Sprintf("@%s granted @%s the `%s` badge.", granterUser.Username, granted.Username, b.Name),
+		}
+		for _, sub := range subs {
+			post := basePost.Clone()
+			post.ChannelId = sub
+			err := p.mm.Post.CreatePost(post)
+			if err != nil {
+				p.mm.Log.Debug("notify subscription error", "err", err)
+			}
+		}
 		if inChannel {
-			err := p.mm.Post.CreatePost(&model.Post{
-				UserId:    p.BotUserID,
-				ChannelId: channelID,
-				Message:   fmt.Sprintf("@%s granted @%s the `%s` badge.", granterUser.Username, granted.Username, b.Name),
-			})
+			post := basePost.Clone()
+			post.ChannelId = channelID
+			err := p.mm.Post.CreatePost(post)
 			if err != nil {
 				p.mm.Log.Debug("notify here error", "err", err)
 			}

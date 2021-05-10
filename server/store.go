@@ -36,6 +36,11 @@ type Store interface {
 	DeleteType(tID badgesmodel.BadgeType) error
 	DeleteBadge(bID badgesmodel.BadgeID) error
 
+	AddSubscription(tID badgesmodel.BadgeType, cID string) error
+	RemoveSubscriptions(tID badgesmodel.BadgeType, cID string) error
+	GetTypeSubscriptions(tID badgesmodel.BadgeType) ([]string, error)
+	GetChannelSubscriptions(cID string) ([]badgesmodel.BadgeTypeDefinition, error)
+
 	// PAPI
 	EnsureBadges(badges []badgesmodel.Badge, pluginID, botID string) ([]badgesmodel.Badge, error)
 
@@ -685,6 +690,122 @@ func (s *store) DeleteBadge(bID badgesmodel.BadgeID) error {
 	}
 
 	return nil
+}
+
+func (s *store) getAllSubscriptions() ([]badgesmodel.Subscription, error) {
+	data, appErr := s.api.KVGet(KVKeySubscriptions)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	subs := []badgesmodel.Subscription{}
+	if data != nil {
+		err := json.Unmarshal(data, &subs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return subs, nil
+}
+
+func (s *store) storeSubscriptionList(subs []badgesmodel.Subscription) error {
+	data, err := json.Marshal(subs)
+	if err != nil {
+		return err
+	}
+
+	appErr := s.api.KVSet(KVKeySubscriptions, data)
+	if appErr != nil {
+		return appErr
+	}
+
+	return nil
+}
+
+func (s *store) AddSubscription(tID badgesmodel.BadgeType, cID string) error {
+	subs, err := s.getAllSubscriptions()
+	if err != nil {
+		return err
+	}
+
+	for _, sub := range subs {
+		if sub.ChannelID == cID && sub.TypeID == tID {
+			return nil
+		}
+	}
+
+	subs = append(subs, badgesmodel.Subscription{ChannelID: cID, TypeID: tID})
+
+	err = s.storeSubscriptionList(subs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *store) RemoveSubscriptions(tID badgesmodel.BadgeType, cID string) error {
+	subs, err := s.getAllSubscriptions()
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for i, sub := range subs {
+		if sub.ChannelID == cID && sub.TypeID == tID {
+			subs = append(subs[:i], subs[i+1:]...)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return nil
+	}
+
+	err = s.storeSubscriptionList(subs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *store) GetTypeSubscriptions(tID badgesmodel.BadgeType) ([]string, error) {
+	subs, err := s.getAllSubscriptions()
+	if err != nil {
+		return nil, err
+	}
+
+	out := []string{}
+	for _, sub := range subs {
+		if sub.TypeID == tID {
+			out = append(out, sub.ChannelID)
+		}
+	}
+
+	return out, nil
+}
+func (s *store) GetChannelSubscriptions(cID string) ([]badgesmodel.BadgeTypeDefinition, error) {
+	subs, err := s.getAllSubscriptions()
+	if err != nil {
+		return nil, err
+	}
+
+	out := []badgesmodel.BadgeTypeDefinition{}
+	for _, sub := range subs {
+		if sub.ChannelID == cID {
+			t, err := s.GetType(sub.TypeID)
+			if err != nil {
+				s.api.LogDebug("cannot get type", "err", err)
+				continue
+			}
+			out = append(out, *t)
+		}
+	}
+
+	return out, nil
 }
 
 func (s *store) getBadgeFromList(badgeID badgesmodel.BadgeID, list []badgesmodel.Badge) (*badgesmodel.Badge, error) {

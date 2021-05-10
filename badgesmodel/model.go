@@ -79,6 +79,11 @@ type GrantBadgeRequest struct {
 	BotID   string
 }
 
+type Subscription struct {
+	TypeID    BadgeType
+	ChannelID string
+}
+
 func (b Badge) IsValid() bool {
 	return len(b.Name) <= NameMaxLength &&
 		len(b.Description) <= DescriptionMaxLength &&

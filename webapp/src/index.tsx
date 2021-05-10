@@ -6,7 +6,7 @@ import {GenericAction} from 'mattermost-redux/types/actions';
 
 import React from 'react';
 
-import {openCreateBadge, openCreateType, setRHSView, setShowRHSAction} from 'actions/actions';
+import {openAddSubscription, openCreateBadge, openCreateType, openRemoveSubscription, setRHSView, setShowRHSAction} from 'actions/actions';
 
 import UserBadges from 'components/rhs';
 
@@ -53,6 +53,19 @@ export default class Plugin {
                 store.dispatch(openCreateType() as any);
             },
             null,
+        )
+
+        registry.registerChannelHeaderMenuAction(
+            "Add badge subscription",
+            () => {
+                store.dispatch(openAddSubscription() as any);
+            },
+        )
+        registry.registerChannelHeaderMenuAction(
+            "Remove badge subscription",
+            () => {
+                store.dispatch(openRemoveSubscription() as any);
+            },
         )
     }
 }

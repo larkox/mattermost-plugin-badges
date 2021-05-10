@@ -62,6 +62,8 @@ func (p *Plugin) initializeAPI() {
 	dialogRouter.HandleFunc(DialogPathSelectType, p.extractUserMiddleWare(p.dialogSelectType, ResponseTypeDialog)).Methods(http.MethodPost)
 	dialogRouter.HandleFunc(DialogPathEditBadge, p.extractUserMiddleWare(p.dialogEditBadge, ResponseTypeDialog)).Methods(http.MethodPost)
 	dialogRouter.HandleFunc(DialogPathEditType, p.extractUserMiddleWare(p.dialogEditType, ResponseTypeDialog)).Methods(http.MethodPost)
+	dialogRouter.HandleFunc(DialogPathCreateSubscription, p.extractUserMiddleWare(p.dialogCreateSubscription, ResponseTypeDialog)).Methods(http.MethodPost)
+	dialogRouter.HandleFunc(DialogPathDeleteSubscription, p.extractUserMiddleWare(p.dialogDeleteSubscription, ResponseTypeDialog)).Methods(http.MethodPost)
 
 	p.router.PathPrefix("/").HandlerFunc(p.defaultHandler)
 }
@@ -535,7 +537,7 @@ func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID stri
 
 	badgeID, err := strconv.Atoi(badgeIDStr)
 	if err != nil {
-		dialogError(w, "Invalid field", map[string]string{"type": "Invalid type"})
+		dialogError(w, "Invalid field", map[string]string{DialogFieldBadge: "Invalid badge"})
 		return
 	}
 
@@ -579,6 +581,94 @@ func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID stri
 		UserId:    p.BotUserID,
 		ChannelId: req.ChannelId,
 		Message:   fmt.Sprintf("Badge `%s` granted to @%s.", badge.Name, grantToUser.Username),
+	})
+
+	dialogOK(w)
+}
+
+func (p *Plugin) dialogCreateSubscription(w http.ResponseWriter, r *http.Request, userID string) {
+	req := model.SubmitDialogRequestFromJson(r.Body)
+	if req == nil {
+		dialogError(w, "could not get the dialog request", nil)
+		return
+	}
+
+	u, err := p.mm.User.Get(userID)
+	if err != nil {
+		dialogError(w, err.Error(), nil)
+		return
+	}
+
+	if !canCreateSubscription(*u, req.ChannelId) {
+		dialogError(w, "You cannot create a subscription", nil)
+		return
+	}
+
+	typeIDStr, errText, errors := getDialogSubmissionTextField(req, DialogFieldBadgeType)
+	if errors != nil {
+		dialogError(w, errText, errors)
+		return
+	}
+
+	typeID, err := strconv.Atoi(typeIDStr)
+	if err != nil {
+		dialogError(w, "Invalid field", map[string]string{DialogFieldBadgeType: "Invalid type"})
+		return
+	}
+
+	err = p.store.AddSubscription(badgesmodel.BadgeType(typeID), req.ChannelId)
+	if err != nil {
+		dialogError(w, err.Error(), nil)
+	}
+
+	p.mm.Post.SendEphemeralPost(userID, &model.Post{
+		UserId:    p.BotUserID,
+		ChannelId: req.ChannelId,
+		Message:   fmt.Sprintf("Subscription added"),
+	})
+
+	dialogOK(w)
+}
+
+func (p *Plugin) dialogDeleteSubscription(w http.ResponseWriter, r *http.Request, userID string) {
+	req := model.SubmitDialogRequestFromJson(r.Body)
+	if req == nil {
+		dialogError(w, "could not get the dialog request", nil)
+		return
+	}
+
+	u, err := p.mm.User.Get(userID)
+	if err != nil {
+		dialogError(w, err.Error(), nil)
+		return
+	}
+
+	if !canCreateSubscription(*u, req.ChannelId) {
+		dialogError(w, "You cannot delete a subscription", nil)
+		return
+	}
+
+	typeIDStr, errText, errors := getDialogSubmissionTextField(req, DialogFieldBadgeType)
+	if errors != nil {
+		dialogError(w, errText, errors)
+		return
+	}
+
+	typeID, err := strconv.Atoi(typeIDStr)
+	if err != nil {
+		dialogError(w, "Invalid field", map[string]string{DialogFieldBadgeType: "Invalid type"})
+		return
+	}
+
+	err = p.store.RemoveSubscriptions(badgesmodel.BadgeType(typeID), req.ChannelId)
+	if err != nil {
+		dialogError(w, err.Error(), nil)
+	}
+
+	p.mm.Post.SendEphemeralPost(userID, &model.Post{
+		UserId:    p.BotUserID,
+		ChannelId: req.ChannelId,
+		Message:   fmt.Sprintf("Subscription removed"),
 	})
 
 	dialogOK(w)
