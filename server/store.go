@@ -65,9 +65,9 @@ func (s *store) EnsureBadges(badges []badgesmodel.Badge, pluginID, botID string)
 	}
 
 	var tDef *badgesmodel.BadgeTypeDefinition
-	for _, t := range l {
+	for i, t := range l {
 		if t.CreatedBy == botID {
-			tDef = &t
+			tDef = &l[i]
 			break
 		}
 	}

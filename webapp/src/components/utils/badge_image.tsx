@@ -20,8 +20,12 @@ const BadgeImage: React.FC<Props> = ({badge, size}: Props) => {
         );
     case IMAGE_TYPE_ABSOLUTE_URL:
         return (
-            <img src={badge.image} width={size} height={size} />
-        )
+            <img
+                src={badge.image}
+                width={size}
+                height={size}
+            />
+        );
     default:
         return null;
     }

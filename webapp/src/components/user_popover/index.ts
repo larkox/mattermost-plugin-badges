@@ -28,7 +28,7 @@ type Actions = {
     setRHSView: (view: RHSState) => Promise<void>;
     setRHSBadge: (id: BadgeID | null) => Promise<void>;
     setRHSUser: (id: string | null) => Promise<void>;
-    openGrant: (user?: string, badge?: string) => Promise<void>
+    openGrant: (user?: string, badge?: string) => Promise<void>;
 }
 
 function mapDispatchToProps(dispatch: Dispatch) {

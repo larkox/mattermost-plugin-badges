@@ -152,7 +152,7 @@ func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, grante
 
 func getBooleanString(in bool) string {
 	if in {
-		return "true"
+		return TrueString
 	}
-	return "false"
+	return FalseString
 }

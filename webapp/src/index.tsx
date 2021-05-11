@@ -41,32 +41,32 @@ export default class Plugin {
         );
 
         registry.registerMainMenuAction(
-            "Create badge",
+            'Create badge',
             () => {
                 store.dispatch(openCreateBadge() as any);
             },
             null,
-        )
+        );
         registry.registerMainMenuAction(
-            "Create badge type",
+            'Create badge type',
             () => {
                 store.dispatch(openCreateType() as any);
             },
             null,
-        )
+        );
 
         registry.registerChannelHeaderMenuAction(
-            "Add badge subscription",
+            'Add badge subscription',
             () => {
                 store.dispatch(openAddSubscription() as any);
             },
-        )
+        );
         registry.registerChannelHeaderMenuAction(
-            "Remove badge subscription",
+            'Remove badge subscription',
             () => {
                 store.dispatch(openRemoveSubscription() as any);
             },
-        )
+        );
     }
 }
 

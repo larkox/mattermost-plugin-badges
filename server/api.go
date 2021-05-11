@@ -268,7 +268,7 @@ func (p *Plugin) dialogSelectType(w http.ResponseWriter, r *http.Request, userID
 		return
 	}
 
-	p.mm.SlashCommand.Execute(&model.CommandArgs{
+	_, _ = p.mm.SlashCommand.Execute(&model.CommandArgs{
 		UserId:    userID,
 		ChannelId: req.ChannelId,
 		TeamId:    req.TeamId,
@@ -309,7 +309,7 @@ func (p *Plugin) dialogEditType(w http.ResponseWriter, r *http.Request, userID s
 	}
 
 	if getDialogSubmissionBoolField(req, DialogFieldTypeDelete) {
-		err := p.store.DeleteType(badgesmodel.BadgeType(originalTypeID))
+		err = p.store.DeleteType(badgesmodel.BadgeType(originalTypeID))
 		if err != nil {
 			dialogError(w, err.Error(), nil)
 		}
@@ -335,12 +335,13 @@ func (p *Plugin) dialogEditType(w http.ResponseWriter, r *http.Request, userID s
 			if username == "" {
 				continue
 			}
-			u, err := p.mm.User.GetByUsername(username)
+			var allowedUser *model.User
+			allowedUser, err = p.mm.User.GetByUsername(username)
 			if err != nil {
 				dialogError(w, "Cannot find user", map[string]string{DialogFieldTypeAllowlistCanCreate: fmt.Sprintf("Error getting user %s. Error: %v", username, err)})
 				return
 			}
-			originalType.CanCreate.AllowList[u.Id] = true
+			originalType.CanCreate.AllowList[allowedUser.Id] = true
 		}
 	}
 
@@ -352,12 +353,13 @@ func (p *Plugin) dialogEditType(w http.ResponseWriter, r *http.Request, userID s
 			if username == "" {
 				continue
 			}
-			u, err := p.mm.User.GetByUsername(username)
+			var allowedUser *model.User
+			allowedUser, err = p.mm.User.GetByUsername(username)
 			if err != nil {
 				dialogError(w, "Cannot find user", map[string]string{DialogFieldTypeAllowlistCanGrant: fmt.Sprintf("Error getting user %s. Error: %v", username, err)})
 				return
 			}
-			originalType.CanGrant.AllowList[u.Id] = true
+			originalType.CanGrant.AllowList[allowedUser.Id] = true
 		}
 	}
 
@@ -413,7 +415,7 @@ func (p *Plugin) dialogSelectBadge(w http.ResponseWriter, r *http.Request, userI
 		return
 	}
 
-	p.mm.SlashCommand.Execute(&model.CommandArgs{
+	_, _ = p.mm.SlashCommand.Execute(&model.CommandArgs{
 		UserId:    userID,
 		ChannelId: req.ChannelId,
 		TeamId:    req.TeamId,
@@ -454,7 +456,7 @@ func (p *Plugin) dialogEditBadge(w http.ResponseWriter, r *http.Request, userID 
 	}
 
 	if getDialogSubmissionBoolField(req, DialogFieldBadgeDelete) {
-		err := p.store.DeleteBadge(badgesmodel.BadgeID(originalBadgeID))
+		err = p.store.DeleteBadge(badgesmodel.BadgeID(originalBadgeID))
 		if err != nil {
 			dialogError(w, err.Error(), nil)
 			return
@@ -574,7 +576,6 @@ func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID stri
 
 	if shouldNotify {
 		p.notifyGrant(badgesmodel.BadgeID(badgeID), userID, grantToUser, notifyHere, req.ChannelId)
-
 	}
 
 	p.mm.Post.SendEphemeralPost(userID, &model.Post{
@@ -624,7 +625,7 @@ func (p *Plugin) dialogCreateSubscription(w http.ResponseWriter, r *http.Request
 	p.mm.Post.SendEphemeralPost(userID, &model.Post{
 		UserId:    p.BotUserID,
 		ChannelId: req.ChannelId,
-		Message:   fmt.Sprintf("Subscription added"),
+		Message:   "Subscription added",
 	})
 
 	dialogOK(w)
@@ -668,7 +669,7 @@ func (p *Plugin) dialogDeleteSubscription(w http.ResponseWriter, r *http.Request
 	p.mm.Post.SendEphemeralPost(userID, &model.Post{
 		UserId:    p.BotUserID,
 		ChannelId: req.ChannelId,
-		Message:   fmt.Sprintf("Subscription removed"),
+		Message:   "Subscription removed",
 	})
 
 	dialogOK(w)
@@ -727,7 +728,7 @@ func (p *Plugin) grantBadge(w http.ResponseWriter, r *http.Request, pluginID str
 		}
 	}
 
-	w.Write([]byte("OK"))
+	_, _ = w.Write([]byte("OK"))
 }
 
 func (p *Plugin) ensureBadges(w http.ResponseWriter, r *http.Request, pluginID string) {

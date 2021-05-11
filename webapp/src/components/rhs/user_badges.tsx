@@ -11,7 +11,7 @@ import {RHS_STATE_DETAIL} from '../../constants';
 
 import UserBadgeRow from './user_badge_row';
 
-import './user_badges.scss'
+import './user_badges.scss';
 
 type Props = {
     title: string;

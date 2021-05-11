@@ -4,7 +4,7 @@ import {UserBadge} from '../../types/badges';
 import BadgeImage from '../utils/badge_image';
 import {markdown} from 'utils/markdown';
 
-import './user_badge_row.scss'
+import './user_badge_row.scss';
 
 type Props = {
     badge: UserBadge;

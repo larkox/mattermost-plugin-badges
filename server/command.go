@@ -221,7 +221,7 @@ func (p *Plugin) runEditBadge(args []string, extra *model.CommandArgs) (bool, *m
 	var badgeIDStr string
 	fs := pflag.NewFlagSet("", pflag.ContinueOnError)
 	fs.StringVar(&badgeIDStr, "id", "", "ID of the badge")
-	if err := fs.Parse(args); err != nil {
+	if err = fs.Parse(args); err != nil {
 		return commandError(err.Error())
 	}
 
@@ -369,7 +369,7 @@ func (p *Plugin) runEditType(args []string, extra *model.CommandArgs) (bool, *mo
 	var badgeTypeStr string
 	fs := pflag.NewFlagSet("", pflag.ContinueOnError)
 	fs.StringVar(&badgeTypeStr, "type", "", "ID of the type")
-	if err := fs.Parse(args); err != nil {
+	if err = fs.Parse(args); err != nil {
 		return commandError(err.Error())
 	}
 
@@ -432,7 +432,8 @@ func (p *Plugin) runEditType(args []string, extra *model.CommandArgs) (bool, *mo
 		if !allowed {
 			continue
 		}
-		allowedUser, err := p.mm.User.Get(uID)
+		var allowedUser *model.User
+		allowedUser, err = p.mm.User.Get(uID)
 		if err != nil {
 			continue
 		}
@@ -449,7 +450,8 @@ func (p *Plugin) runEditType(args []string, extra *model.CommandArgs) (bool, *mo
 		if !allowed {
 			continue
 		}
-		allowedUser, err := p.mm.User.Get(uID)
+		var allowedUser *model.User
+		allowedUser, err = p.mm.User.Get(uID)
 		if err != nil {
 			continue
 		}
@@ -635,7 +637,6 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 	stateText := ""
 	introductionText := ""
 	if username != "" {
-
 		if username[0] == '@' {
 			username = username[1:]
 		}
@@ -680,7 +681,8 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 	}
 
 	if badgeStr != "" {
-		badgeID, err := strconv.Atoi(badgeStr)
+		var badgeID int
+		badgeID, err = strconv.Atoi(badgeStr)
 		if err != nil {
 			return commandError(err.Error())
 		}
@@ -770,7 +772,8 @@ func (p *Plugin) runCreateSubscription(args []string, extra *model.CommandArgs) 
 	}
 
 	if typeStr != "" {
-		typeID, err := strconv.Atoi(typeStr)
+		var typeID int
+		typeID, err = strconv.Atoi(typeStr)
 		if err != nil {
 			return commandError(err.Error())
 		}
@@ -836,7 +839,8 @@ func (p *Plugin) runDeleteSubscription(args []string, extra *model.CommandArgs) 
 	}
 
 	if typeStr != "" {
-		typeID, err := strconv.Atoi(typeStr)
+		var typeID int
+		typeID, err = strconv.Atoi(typeStr)
 		if err != nil {
 			return commandError(err.Error())
 		}

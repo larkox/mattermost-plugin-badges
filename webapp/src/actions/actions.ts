@@ -51,55 +51,55 @@ export function setTriggerId(triggerId: string) {
 
 export function openGrant(user?: string, badge?: string) {
     return (dispatch: Dispatch<AnyAction>, getState: GetStateFunc) => {
-        let command = '/badges grant'
+        let command = '/badges grant';
         if (user) {
-            command += ` --user ${user}`
+            command += ` --user ${user}`;
         }
 
         if (badge) {
-            command += ` --badge ${badge}`
+            command += ` --badge ${badge}`;
         }
 
-        clientExecuteCommand(dispatch, getState, command)
+        clientExecuteCommand(dispatch, getState, command);
 
-        return {data: true}
-    }
+        return {data: true};
+    };
 }
 
 export function openCreateType() {
     return (dispatch: Dispatch<AnyAction>, getState: GetStateFunc) => {
-        let command = '/badges create type'
-        clientExecuteCommand(dispatch, getState, command)
+        const command = '/badges create type';
+        clientExecuteCommand(dispatch, getState, command);
 
-        return {data: true}
-    }
+        return {data: true};
+    };
 }
 
 export function openCreateBadge() {
     return (dispatch: Dispatch<AnyAction>, getState: GetStateFunc) => {
-        let command = '/badges create badge'
-        clientExecuteCommand(dispatch, getState, command)
+        const command = '/badges create badge';
+        clientExecuteCommand(dispatch, getState, command);
 
-        return {data: true}
-    }
+        return {data: true};
+    };
 }
 
 export function openAddSubscription() {
     return (dispatch: Dispatch<AnyAction>, getState: GetStateFunc) => {
-        let command = '/badges subscription create'
-        clientExecuteCommand(dispatch, getState, command)
+        const command = '/badges subscription create';
+        clientExecuteCommand(dispatch, getState, command);
 
-        return {data: true}
-    }
+        return {data: true};
+    };
 }
 
 export function openRemoveSubscription() {
     return (dispatch: Dispatch<AnyAction>, getState: GetStateFunc) => {
-        let command = '/badges subscription remove'
-        clientExecuteCommand(dispatch, getState, command)
+        const command = '/badges subscription remove';
+        clientExecuteCommand(dispatch, getState, command);
 
-        return {data: true}
-    }
+        return {data: true};
+    };
 }
 
 export async function clientExecuteCommand(dispatch: Dispatch<AnyAction>, getState: GetStateFunc, command: string) {

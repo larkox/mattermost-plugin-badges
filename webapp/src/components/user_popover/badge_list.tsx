@@ -23,7 +23,7 @@ type Props = {
         setRHSView: (view: RHSState) => Promise<void>;
         setRHSBadge: (id: BadgeID | null) => Promise<void>;
         setRHSUser: (id: string | null) => Promise<void>;
-        openGrant: (user?: string, badge?: string) => Promise<void>
+        openGrant: (user?: string, badge?: string) => Promise<void>;
     };
 }
 
@@ -75,7 +75,7 @@ class BadgeList extends React.PureComponent<Props, State> {
     }
 
     onGrantClick = () => {
-        this.props.actions.openGrant(this.props.user.username)
+        this.props.actions.openGrant(this.props.user.username);
         this.props.hide();
     }
 

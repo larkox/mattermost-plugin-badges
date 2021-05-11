@@ -7,7 +7,7 @@ import {UserProfile} from 'mattermost-redux/types/users';
 
 import {Ownership} from '../../types/badges';
 
-import './user_row.scss'
+import './user_row.scss';
 type Props = {
     ownership: Ownership;
     onClick: (user: string) => void;

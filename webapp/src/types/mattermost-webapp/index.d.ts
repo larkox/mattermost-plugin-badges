@@ -8,8 +8,8 @@ export interface PluginRegistry {
     registerRightHandSidebarComponent(component: React.ElementType, name: string): RegisterRightHandSidebarComponentReturn;
     registerReducer(reducer: Reducer);
     registerChannelHeaderButtonAction(icon: React.ReactNode, action: () => void, dropdownText: string, tooltip: string);
-    registerMainMenuAction(text: React.ReactNode, action: () => void, mobileIcon: React.ReactNode)
-    registerChannelHeaderMenuAction(text: string, action: (channelID: string) => void)
+    registerMainMenuAction(text: React.ReactNode, action: () => void, mobileIcon: React.ReactNode);
+    registerChannelHeaderMenuAction(text: string, action: (channelID: string) => void);
 
     // Add more if needed from https://developers.mattermost.com/extend/plugins/webapp/reference
 }
