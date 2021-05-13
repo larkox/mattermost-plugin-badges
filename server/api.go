@@ -346,7 +346,7 @@ func (p *Plugin) dialogEditType(w http.ResponseWriter, r *http.Request, userID s
 	}
 
 	if grantAllowList != "" {
-		originalType.CanCreate.AllowList = map[string]bool{}
+		originalType.CanGrant.AllowList = map[string]bool{}
 		usernames := strings.Split(createAllowList, ",")
 		for _, username := range usernames {
 			username = strings.TrimSpace(username)
@@ -564,7 +564,9 @@ func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID stri
 		return
 	}
 
-	shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeID), grantToID, userID)
+	reason, _ := req.Submission[DialogFieldGrantReason].(string)
+
+	shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeID), grantToID, userID, reason)
 	if err != nil {
 		p.writeAPIError(w, &APIErrorResponse{
 			ID:         "cannot grant badge",
@@ -575,7 +577,7 @@ func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID stri
 	}
 
 	if shouldNotify {
-		p.notifyGrant(badgesmodel.BadgeID(badgeID), userID, grantToUser, notifyHere, req.ChannelId)
+		p.notifyGrant(badgesmodel.BadgeID(badgeID), userID, grantToUser, notifyHere, req.ChannelId, reason)
 	}
 
 	p.mm.Post.SendEphemeralPost(userID, &model.Post{
@@ -712,7 +714,7 @@ func (p *Plugin) grantBadge(w http.ResponseWriter, r *http.Request, pluginID str
 		return
 	}
 
-	shouldNotify, err := p.store.GrantBadge(req.BadgeID, req.UserID, req.BotID)
+	shouldNotify, err := p.store.GrantBadge(req.BadgeID, req.UserID, req.BotID, req.Reason)
 	if err != nil {
 		p.writeAPIError(w, &APIErrorResponse{
 			ID:         "cannot grant badge",
@@ -724,7 +726,7 @@ func (p *Plugin) grantBadge(w http.ResponseWriter, r *http.Request, pluginID str
 	if shouldNotify {
 		u, err := p.mm.User.Get(req.UserID)
 		if err == nil {
-			p.notifyGrant(req.BadgeID, req.BotID, u, false, "")
+			p.notifyGrant(req.BadgeID, req.BotID, u, false, "", req.Reason)
 		}
 	}
 

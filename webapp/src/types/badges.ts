@@ -13,6 +13,7 @@ export type Ownership = {
     user: string;
     granted_by: string;
     badge: BadgeID;
+    reason: string;
     time: number;
 }
 

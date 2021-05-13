@@ -54,7 +54,7 @@ const RHS: React.FC = () => {
         return (
             <UserBadges
                 user={currentUser}
-                title={`@${currentUser?.username}'s badges`}
+                isCurrentUser={false}
                 actions={{
                     setRHSView: (view: RHSState) => dispatch(setRHSView(view)),
                     setRHSBadge: (badge: BadgeID | null) => dispatch(setRHSBadge(badge)),
@@ -66,7 +66,7 @@ const RHS: React.FC = () => {
         return (
             <UserBadges
                 user={myUser}
-                title={'My badges'}
+                isCurrentUser={true}
                 actions={{
                     setRHSView: (view: RHSState) => dispatch(setRHSView(view)),
                     setRHSBadge: (badge: BadgeID | null) => dispatch(setRHSBadge(badge)),

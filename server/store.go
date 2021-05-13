@@ -27,7 +27,7 @@ type Store interface {
 
 	// API
 	AddBadge(badge badgesmodel.Badge) (*badgesmodel.Badge, error)
-	GrantBadge(badgeID badgesmodel.BadgeID, userID string, grantedBy string) (bool, error)
+	GrantBadge(badgeID badgesmodel.BadgeID, userID string, grantedBy string, reason string) (bool, error)
 	AddType(t badgesmodel.BadgeTypeDefinition) (*badgesmodel.BadgeTypeDefinition, error)
 	GetType(tID badgesmodel.BadgeType) (*badgesmodel.BadgeTypeDefinition, error)
 	GetBadge(badgeID badgesmodel.BadgeID) (*badgesmodel.Badge, error)
@@ -413,7 +413,7 @@ func (s *store) getOwnershipList() (badgesmodel.OwnershipList, error) {
 	return ownership, nil
 }
 
-func (s *store) GrantBadge(id badgesmodel.BadgeID, userID string, grantedBy string) (bool, error) {
+func (s *store) GrantBadge(id badgesmodel.BadgeID, userID string, grantedBy string, reason string) (bool, error) {
 	badge, err := s.getBadge(id)
 	if err != nil {
 		return false, err
@@ -456,6 +456,7 @@ func (s *store) GrantBadge(id badgesmodel.BadgeID, userID string, grantedBy stri
 		User:      user.Id,
 		Badge:     badge.ID,
 		Time:      time.Now(),
+		Reason:    reason,
 		GrantedBy: grantedByUser.Id,
 	})
 

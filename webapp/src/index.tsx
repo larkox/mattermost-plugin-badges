@@ -37,7 +37,7 @@ export default class Plugin {
                 store.dispatch(toggleRHSPlugin);
             },
             'Badges',
-            'Open your list of badges.',
+            'Open the list of all badges.',
         );
 
         registry.registerMainMenuAction(

@@ -14,7 +14,7 @@ import UserBadgeRow from './user_badge_row';
 import './user_badges.scss';
 
 type Props = {
-    title: string;
+    isCurrentUser: boolean;
     user: UserProfile | null;
     actions: {
         setRHSView: (view: RHSState) => void;
@@ -106,15 +106,21 @@ class UserBadges extends React.PureComponent<Props, State> {
         const content = this.state.badges.map((badge) => {
             return (
                 <UserBadgeRow
+                    isCurrentUser={this.props.isCurrentUser}
                     key={badge.time}
                     badge={badge}
                     onClick={this.onBadgeClick}
                 />
             );
         });
+
+        let title = 'My badges';
+        if (!this.props.isCurrentUser) {
+            title = `@${this.props.user.username}'s badges`;
+        }
         return (
             <div className='UserBadges'>
-                <div><b>{this.props.title}</b></div>
+                <div><b>{title}</b></div>
                 <Scrollbars
                     autoHide={true}
                     autoHideTimeout={500}

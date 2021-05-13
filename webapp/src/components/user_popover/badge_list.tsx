@@ -62,6 +62,7 @@ class BadgeList extends React.PureComponent<Props, State> {
         this.props.actions.setRHSUser(this.props.user.id);
         this.props.actions.setRHSView(RHS_STATE_OTHER);
         this.props.openRHS();
+        this.props.hide();
     }
 
     onBadgeClick = (badge: UserBadge) => {
@@ -72,6 +73,7 @@ class BadgeList extends React.PureComponent<Props, State> {
         this.props.actions.setRHSBadge(badge.id);
         this.props.actions.setRHSView(RHS_STATE_DETAIL);
         this.props.openRHS();
+        this.props.hide();
     }
 
     onGrantClick = () => {
@@ -93,11 +95,16 @@ class BadgeList extends React.PureComponent<Props, State> {
             }
 
             const time = new Date(badge.time);
+            let reason = null;
+            if (badge.reason) {
+                reason = (<div>{'Why? ' + badge.reason}</div>);
+            }
             const badgeComponent = (
                 <OverlayTrigger
                     overlay={<Tooltip>
                         <div>{badge.name}</div>
                         <div>{markdown(badge.description)}</div>
+                        {reason}
                         <div>{`Granted by: ${badge.granted_by_name}`}</div>
                         <div>{`Granted at: ${time.toDateString()}`}</div>
                     </Tooltip>}

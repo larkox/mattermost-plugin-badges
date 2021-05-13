@@ -38,6 +38,7 @@ const (
 	DialogFieldUser                   = "user"
 	DialogFieldBadge                  = "badge"
 	DialogFieldNotifyHere             = "notify_here"
+	DialogFieldGrantReason            = "reason"
 
 	TrueString  = "true"
 	FalseString = "false"

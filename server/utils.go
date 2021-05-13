@@ -107,7 +107,7 @@ func dumpObject(o interface{}) {
 	fmt.Println(string(b))
 }
 
-func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, granted *model.User, inChannel bool, channelID string) {
+func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, granted *model.User, inChannel bool, channelID string, reason string) {
 	b, errBadge := p.store.GetBadgeDetails(badgeID)
 	granterUser, errUser := p.mm.User.Get(granter)
 	if errBadge != nil {
@@ -120,17 +120,42 @@ func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, grante
 	subs, _ := p.store.GetTypeSubscriptions(b.Type)
 
 	if errBadge == nil && errUser == nil {
-		err := p.mm.Post.DM(p.BotUserID, granted.Id, &model.Post{
-			Message: fmt.Sprintf("@%s granted you the `%s` badge.", granterUser.Username, b.Name),
-		})
+		image := ""
+		switch b.ImageType {
+		case badgesmodel.ImageTypeEmoji:
+			image = fmt.Sprintf(":%s: ", b.Image)
+		case badgesmodel.ImageTypeAbsoluteURL:
+			image = fmt.Sprintf("![icon](%s) ", b.Image)
+		}
+
+		dmPost := model.Post{}
+		dmText := fmt.Sprintf("@%s granted you the %s`%s` badge.", granterUser.Username, image, b.Name)
+		if reason != "" {
+			dmText += "\nWhy? " + reason
+		}
+		dmAttachment := model.SlackAttachment{
+			Title: fmt.Sprintf("%sbadge granted!", image),
+			Text:  dmText,
+		}
+		model.ParseSlackAttachment(&dmPost, []*model.SlackAttachment{&dmAttachment})
+		err := p.mm.Post.DM(p.BotUserID, granted.Id, &dmPost)
 		if err != nil {
 			p.mm.Log.Debug("dm error", "err", err)
 		}
+
 		basePost := model.Post{
 			UserId:    p.BotUserID,
 			ChannelId: channelID,
-			Message:   fmt.Sprintf("@%s granted @%s the `%s` badge.", granterUser.Username, granted.Username, b.Name),
 		}
+		text := fmt.Sprintf("@%s granted @%s the %s`%s` badge.", granterUser.Username, granted.Username, image, b.Name)
+		if reason != "" {
+			text += "\nWhy? " + reason
+		}
+		attachment := model.SlackAttachment{
+			Title: fmt.Sprintf("%sbadge granted!", image),
+			Text:  text,
+		}
+		model.ParseSlackAttachment(&basePost, []*model.SlackAttachment{&attachment})
 		for _, sub := range subs {
 			post := basePost.Clone()
 			post.ChannelId = sub

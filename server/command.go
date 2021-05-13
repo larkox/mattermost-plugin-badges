@@ -619,13 +619,13 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 			return commandError(err.Error())
 		}
 
-		shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeID), user.Id, extra.UserId)
+		shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeID), user.Id, extra.UserId, "")
 		if err != nil {
 			return commandError(err.Error())
 		}
 
 		if shouldNotify {
-			p.notifyGrant(badgesmodel.BadgeID(badgeID), extra.UserId, user, false, "")
+			p.notifyGrant(badgesmodel.BadgeID(badgeID), extra.UserId, user, false, "", "")
 		}
 
 		p.postCommandResponse(extra, "Granted")
@@ -703,6 +703,14 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 	}
 
 	elements = append(elements, badgeElement)
+
+	elements = append(elements, model.DialogElement{
+		DisplayName: "Reason",
+		Name:        DialogFieldGrantReason,
+		Optional:    true,
+		HelpText:    "Reason why you are granting this badge. This will be seen by the user, and wherever this grant notification is shown (e.g. subscriptions).",
+		Type:        "text",
+	})
 
 	elements = append(elements, model.DialogElement{
 		DisplayName: "Notify on this channel",
@@ -963,29 +971,29 @@ func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (
 		_, _ = p.store.AddBadge(b)
 	}
 
-	_, _ = p.store.GrantBadge(0, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(2, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(0, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(5, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(5, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId)
-	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId)
+	_, _ = p.store.GrantBadge(0, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(2, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(0, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(5, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(5, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId, "")
+	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId, "")
 	return false, &model.CommandResponse{Text: "Added"}, nil
 }
 

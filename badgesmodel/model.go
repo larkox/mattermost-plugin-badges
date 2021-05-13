@@ -11,6 +11,7 @@ type Ownership struct {
 	User      string    `json:"user"`
 	GrantedBy string    `json:"granted_by"`
 	Badge     BadgeID   `json:"badge"`
+	Reason    string    `json:"reason"`
 	Time      time.Time `json:"time"`
 }
 
@@ -77,6 +78,7 @@ type GrantBadgeRequest struct {
 	BadgeID BadgeID
 	UserID  string
 	BotID   string
+	Reason  string
 }
 
 type Subscription struct {
