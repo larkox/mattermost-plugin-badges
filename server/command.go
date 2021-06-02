@@ -60,8 +60,6 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	switch command {
 	case "test-clean":
 		handler = p.runClean
-	case "test-initial-badges":
-		handler = p.runTestInitialBadges
 	case "grant":
 		handler = p.runGrant
 	case "edit":
@@ -92,6 +90,13 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 }
 
 func (p *Plugin) runClean(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
+	user, err := p.mm.User.Get(extra.UserId)
+	if err != nil {
+		return false, &model.CommandResponse{Text: "Cannot get user."}, nil
+	}
+	if !user.IsSystemAdmin() {
+		return false, &model.CommandResponse{Text: "Only a system admin can clean the badges database."}, nil
+	}
 	_ = p.mm.KV.DeleteAll()
 	return false, &model.CommandResponse{Text: "Clean"}, nil
 }
@@ -227,42 +232,6 @@ func (p *Plugin) runEditBadge(args []string, extra *model.CommandArgs) (bool, *m
 
 	if badgeIDStr == "" {
 		return commandError("You must set the badge ID")
-		// badgeSuggestions, err := p.store.GetEditBadgeSuggestions(*u)
-		// if err != nil {
-		// 	return commandError(err.Error())
-		// }
-
-		// badgesOptions := []*model.PostActionOptions{}
-		// for _, badgeSuggestion := range badgeSuggestions {
-		// 	id := strconv.Itoa(int(badgeSuggestion.ID))
-		// 	badgesOptions = append(badgesOptions, &model.PostActionOptions{Text: badgeSuggestion.Name, Value: id})
-		// }
-
-		// if len(badgesOptions) == 0 {
-		// 	return commandError("You cannot edit any badge.")
-		// }
-
-		// err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
-		// 	TriggerId: extra.TriggerId,
-		// 	URL:       p.getDialogURL() + DialogPathSelectBadge,
-		// 	Dialog: model.Dialog{
-		// 		Title:       "Select a badge to edit",
-		// 		SubmitLabel: "Select",
-		// 		Elements: []model.DialogElement{
-		// 			{
-		// 				DisplayName: "Badge",
-		// 				Type:        "select",
-		// 				Name:        DialogFieldBadge,
-		// 				Options:     badgesOptions,
-		// 			},
-		// 		},
-		// 	},
-		// })
-		// if err != nil {
-		// 	return commandError(err.Error())
-		// }
-
-		// return false, &model.CommandResponse{}, nil
 	}
 
 	badgeID, err := strconv.Atoi(badgeIDStr)
@@ -375,42 +344,6 @@ func (p *Plugin) runEditType(args []string, extra *model.CommandArgs) (bool, *mo
 
 	if badgeTypeStr == "" {
 		return commandError("You must provide a type id")
-		// typeSuggestions, err := p.store.GetEditTypeSuggestions(*u)
-		// if err != nil {
-		// 	return commandError(err.Error())
-		// }
-
-		// typeOptions := []*model.PostActionOptions{}
-		// for _, typeSuggestion := range typeSuggestions {
-		// 	id := strconv.Itoa(int(typeSuggestion.ID))
-		// 	typeOptions = append(typeOptions, &model.PostActionOptions{Text: typeSuggestion.Name, Value: id})
-		// }
-
-		// if len(typeOptions) == 0 {
-		// 	return commandError("You cannot edit any type.")
-		// }
-
-		// err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
-		// 	TriggerId: extra.TriggerId,
-		// 	URL:       p.getDialogURL() + DialogPathSelectType,
-		// 	Dialog: model.Dialog{
-		// 		Title:       "Select a type to edit",
-		// 		SubmitLabel: "Select",
-		// 		Elements: []model.DialogElement{
-		// 			{
-		// 				DisplayName: "Type",
-		// 				Type:        "select",
-		// 				Name:        DialogFieldBadgeType,
-		// 				Options:     typeOptions,
-		// 			},
-		// 		},
-		// 	},
-		// })
-		// if err != nil {
-		// 	return commandError(err.Error())
-		// }
-
-		// return false, &model.CommandResponse{}, nil
 	}
 
 	typeID, err := strconv.Atoi(badgeTypeStr)
@@ -894,107 +827,6 @@ func (p *Plugin) runDeleteSubscription(args []string, extra *model.CommandArgs) 
 	}
 
 	return false, &model.CommandResponse{}, nil
-}
-
-func (p *Plugin) runTestInitialBadges(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
-	_ = p.mm.KV.DeleteAll()
-
-	t := &badgesmodel.BadgeTypeDefinition{
-		Name:      "Demo",
-		Frame:     "",
-		CreatedBy: extra.UserId,
-		CanGrant: badgesmodel.PermissionScheme{
-			Everyone: true,
-		},
-		CanCreate: badgesmodel.PermissionScheme{
-			Everyone: true,
-		},
-	}
-	t, _ = p.store.AddType(*t)
-
-	info := []struct {
-		name        string
-		description string
-		image       string
-	}{
-		{
-			name:        "Sporty",
-			description: "Won a sports event",
-			image:       "medal_sports",
-		},
-		{
-			name:        "General",
-			description: "Won a manager event",
-			image:       "medal_military",
-		},
-		{
-			name:        "1st place",
-			description: "Got first place in an event",
-			image:       "1st_place_medal",
-		},
-		{
-			name:        "2nd place",
-			description: "Got second place in an event",
-			image:       "2nd_place_medal",
-		},
-		{
-			name:        "3rd place",
-			description: "Got third place in an event",
-			image:       "3rd_place_medal",
-		},
-		{
-			name:        "Winner",
-			description: "Won a trophy",
-			image:       "trophy",
-		},
-		{
-			name:        "Racer",
-			description: "Won a car race",
-			image:       "racing_car",
-		},
-		{
-			name:        "Poker Pro",
-			description: "Won a poker game",
-			image:       "spades",
-		},
-	}
-	for _, i := range info {
-		b := badgesmodel.Badge{
-			Name:        i.name,
-			Description: i.description,
-			Image:       i.image,
-			ImageType:   badgesmodel.ImageTypeEmoji,
-			Type:        t.ID,
-			Multiple:    true,
-			CreatedBy:   extra.UserId,
-		}
-		_, _ = p.store.AddBadge(b)
-	}
-
-	_, _ = p.store.GrantBadge(0, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(2, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(0, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(5, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(1, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(3, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(5, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(6, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(7, extra.UserId, extra.UserId, "")
-	_, _ = p.store.GrantBadge(4, extra.UserId, extra.UserId, "")
-	return false, &model.CommandResponse{Text: "Added"}, nil
 }
 
 func (p *Plugin) getAutocompleteData() *model.AutocompleteData {
