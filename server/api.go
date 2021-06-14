@@ -100,7 +100,7 @@ func (p *Plugin) dialogCreateBadge(w http.ResponseWriter, r *http.Request, userI
 		return
 	}
 
-	toCreate := badgesmodel.Badge{}
+	toCreate := &badgesmodel.Badge{}
 	toCreate.CreatedBy = userID
 	toCreate.ImageType = badgesmodel.ImageTypeEmoji
 	name, errText, errors := getDialogSubmissionTextField(req, DialogFieldBadgeName)
@@ -123,7 +123,7 @@ func (p *Plugin) dialogCreateBadge(w http.ResponseWriter, r *http.Request, userI
 		return
 	}
 
-	if image[0] == ':' {
+	if length := len(image); length > 1 && image[0] == ':' && image[length-1] == ':' {
 		image = image[1 : len(image)-1]
 	}
 	if image == "" {
@@ -168,7 +168,7 @@ func (p *Plugin) dialogCreateType(w http.ResponseWriter, r *http.Request, userID
 		dialogError(w, "could not get the dialog request", nil)
 		return
 	}
-	toCreate := badgesmodel.BadgeTypeDefinition{}
+	toCreate := &badgesmodel.BadgeTypeDefinition{}
 	toCreate.CreatedBy = userID
 	toCreate.CanCreate.Everyone = getDialogSubmissionBoolField(req, DialogFieldTypeEveryoneCanCreate)
 	toCreate.CanGrant.Everyone = getDialogSubmissionBoolField(req, DialogFieldTypeEveryoneCanGrant)
@@ -263,7 +263,7 @@ func (p *Plugin) dialogSelectType(w http.ResponseWriter, r *http.Request, userID
 		return
 	}
 
-	if !canEditType(*u, *t) {
+	if !canEditType(u, t) {
 		dialogError(w, "You cannot edit this type", nil)
 		return
 	}
@@ -303,7 +303,7 @@ func (p *Plugin) dialogEditType(w http.ResponseWriter, r *http.Request, userID s
 		return
 	}
 
-	if !canEditType(*u, *originalType) {
+	if !canEditType(u, originalType) {
 		dialogError(w, "you have no permissions to edit this type", nil)
 		return
 	}
@@ -363,7 +363,7 @@ func (p *Plugin) dialogEditType(w http.ResponseWriter, r *http.Request, userID s
 		}
 	}
 
-	err = p.store.UpdateType(*originalType)
+	err = p.store.UpdateType(originalType)
 	if err != nil {
 		dialogError(w, err.Error(), nil)
 		return
@@ -410,7 +410,7 @@ func (p *Plugin) dialogSelectBadge(w http.ResponseWriter, r *http.Request, userI
 		return
 	}
 
-	if !canEditBadge(*u, *b) {
+	if !canEditBadge(u, b) {
 		dialogError(w, "You cannot edit this badge", nil)
 		return
 	}
@@ -450,7 +450,7 @@ func (p *Plugin) dialogEditBadge(w http.ResponseWriter, r *http.Request, userID 
 		return
 	}
 
-	if !canEditBadge(*u, *originalBadge) {
+	if !canEditBadge(u, originalBadge) {
 		dialogError(w, "you have no permissions to edit this type", nil)
 		return
 	}
@@ -507,7 +507,7 @@ func (p *Plugin) dialogEditBadge(w http.ResponseWriter, r *http.Request, userID 
 
 	originalBadge.Multiple = getDialogSubmissionBoolField(req, DialogFieldBadgeMultiple)
 
-	err = p.store.UpdateBadge(*originalBadge)
+	err = p.store.UpdateBadge(originalBadge)
 	if err != nil {
 		dialogError(w, err.Error(), nil)
 		return
@@ -602,7 +602,7 @@ func (p *Plugin) dialogCreateSubscription(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if !canCreateSubscription(*u, req.ChannelId) {
+	if !canCreateSubscription(u, req.ChannelId) {
 		dialogError(w, "You cannot create a subscription", nil)
 		return
 	}
@@ -646,7 +646,7 @@ func (p *Plugin) dialogDeleteSubscription(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if !canCreateSubscription(*u, req.ChannelId) {
+	if !canCreateSubscription(u, req.ChannelId) {
 		dialogError(w, "You cannot delete a subscription", nil)
 		return
 	}
@@ -785,7 +785,7 @@ func (p *Plugin) getBadgeSuggestions(w http.ResponseWriter, r *http.Request, act
 		return
 	}
 
-	bb, err := p.store.GetGrantSuggestions(*u)
+	bb, err := p.store.GetGrantSuggestions(u)
 	if err != nil {
 		p.mm.Log.Debug("Error getting suggestions", "error", err)
 		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
@@ -813,7 +813,7 @@ func (p *Plugin) getEditBadgeSuggestions(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	bb, err := p.store.GetEditBadgeSuggestions(*u)
+	bb, err := p.store.GetEditBadgeSuggestions(u)
 	if err != nil {
 		p.mm.Log.Debug("Error getting suggestions", "error", err)
 		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
@@ -841,7 +841,7 @@ func (p *Plugin) getBadgeTypeSuggestions(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	types, err := p.store.GetTypeSuggestions(*u)
+	types, err := p.store.GetTypeSuggestions(u)
 	if err != nil {
 		p.mm.Log.Debug("Error getting suggestions", "error", err)
 		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
@@ -868,7 +868,7 @@ func (p *Plugin) getEditBadgeTypeSuggestions(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	types, err := p.store.GetEditTypeSuggestions(*u)
+	types, err := p.store.GetEditTypeSuggestions(u)
 	if err != nil {
 		p.mm.Log.Debug("Error getting suggestions", "error", err)
 		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))

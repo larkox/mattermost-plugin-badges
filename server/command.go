@@ -130,7 +130,7 @@ func (p *Plugin) runCreateBadge(args []string, extra *model.CommandArgs) (bool, 
 		return commandError(err.Error())
 	}
 
-	typeSuggestions, err := p.store.GetTypeSuggestions(*u)
+	typeSuggestions, err := p.store.GetTypeSuggestions(u)
 	if err != nil {
 		return commandError(err.Error())
 	}
@@ -244,11 +244,11 @@ func (p *Plugin) runEditBadge(args []string, extra *model.CommandArgs) (bool, *m
 		return commandError(err.Error())
 	}
 
-	if !canEditBadge(*u, *badge) {
+	if !canEditBadge(u, badge) {
 		return commandError("you cannot edit this type")
 	}
 
-	typeSuggestions, err := p.store.GetTypeSuggestions(*u)
+	typeSuggestions, err := p.store.GetTypeSuggestions(u)
 	if err != nil {
 		return commandError(err.Error())
 	}
@@ -331,7 +331,7 @@ func (p *Plugin) runEditType(args []string, extra *model.CommandArgs) (bool, *mo
 		return commandError(err.Error())
 	}
 
-	if !canCreateType(*u, false) {
+	if !canCreateType(u, false) {
 		return commandError("You have no permissions to edit a badge type.")
 	}
 
@@ -356,7 +356,7 @@ func (p *Plugin) runEditType(args []string, extra *model.CommandArgs) (bool, *mo
 		return commandError(err.Error())
 	}
 
-	if !canEditType(*u, *typeDefinition) {
+	if !canEditType(u, typeDefinition) {
 		return commandError("you cannot edit this type")
 	}
 
@@ -469,7 +469,7 @@ func (p *Plugin) runCreateType(args []string, extra *model.CommandArgs) (bool, *
 		return commandError(err.Error())
 	}
 
-	if !canCreateType(*u, false) {
+	if !canCreateType(u, false) {
 		return commandError("You have no permissions to create a badge type.")
 	}
 
@@ -598,7 +598,7 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 	}
 
 	options := []*model.PostActionOptions{}
-	grantableBadges, err := p.store.GetGrantSuggestions(*actingUser)
+	grantableBadges, err := p.store.GetGrantSuggestions(actingUser)
 	if err != nil {
 		return commandError(err.Error())
 	}
@@ -708,7 +708,7 @@ func (p *Plugin) runCreateSubscription(args []string, extra *model.CommandArgs) 
 		return commandError(err.Error())
 	}
 
-	if !canCreateSubscription(*actingUser, extra.ChannelId) {
+	if !canCreateSubscription(actingUser, extra.ChannelId) {
 		return commandError("You cannot create subscriptions")
 	}
 
@@ -729,7 +729,7 @@ func (p *Plugin) runCreateSubscription(args []string, extra *model.CommandArgs) 
 	}
 
 	options := []*model.PostActionOptions{}
-	typesDefinitions, err := p.store.GetEditTypeSuggestions(*actingUser)
+	typesDefinitions, err := p.store.GetEditTypeSuggestions(actingUser)
 	if err != nil {
 		return commandError(err.Error())
 	}
@@ -775,7 +775,7 @@ func (p *Plugin) runDeleteSubscription(args []string, extra *model.CommandArgs) 
 		return commandError(err.Error())
 	}
 
-	if !canCreateSubscription(*actingUser, extra.ChannelId) {
+	if !canCreateSubscription(actingUser, extra.ChannelId) {
 		return commandError("You cannot create subscriptions")
 	}
 

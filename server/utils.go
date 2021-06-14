@@ -23,7 +23,7 @@ func areRolesAllowed(userRoles []string, allowedRoles map[string]bool) bool {
 	return false
 }
 
-func canGrantBadge(user model.User, badge badgesmodel.Badge, badgeType badgesmodel.BadgeTypeDefinition) bool {
+func canGrantBadge(user *model.User, badge *badgesmodel.Badge, badgeType *badgesmodel.BadgeTypeDefinition) bool {
 	if user.IsSystemAdmin() {
 		return true
 	}
@@ -53,7 +53,7 @@ func canGrantBadge(user model.User, badge badgesmodel.Badge, badgeType badgesmod
 	return badgeType.CanGrant.Everyone
 }
 
-func canCreateBadge(user model.User, badgeType badgesmodel.BadgeTypeDefinition) bool {
+func canCreateBadge(user *model.User, badgeType *badgesmodel.BadgeTypeDefinition) bool {
 	if user.IsSystemAdmin() {
 		return true
 	}
@@ -79,15 +79,15 @@ func canCreateBadge(user model.User, badgeType badgesmodel.BadgeTypeDefinition) 
 	return badgeType.CanCreate.Everyone
 }
 
-func canEditType(user model.User, badgeType badgesmodel.BadgeTypeDefinition) bool {
+func canEditType(user *model.User, badgeType *badgesmodel.BadgeTypeDefinition) bool {
 	return user.IsSystemAdmin()
 }
 
-func canEditBadge(user model.User, badge badgesmodel.Badge) bool {
+func canEditBadge(user *model.User, badge *badgesmodel.Badge) bool {
 	return user.IsSystemAdmin() || user.Id == badge.CreatedBy
 }
 
-func canCreateType(user model.User, isPlugin bool) bool {
+func canCreateType(user *model.User, isPlugin bool) bool {
 	if isPlugin {
 		return true
 	}
@@ -95,7 +95,7 @@ func canCreateType(user model.User, isPlugin bool) bool {
 	return user.IsSystemAdmin()
 }
 
-func canCreateSubscription(user model.User, channelID string) bool {
+func canCreateSubscription(user *model.User, channelID string) bool {
 	return user.IsSystemAdmin()
 }
 
@@ -128,7 +128,7 @@ func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, grante
 			image = fmt.Sprintf("![icon](%s) ", b.Image)
 		}
 
-		dmPost := model.Post{}
+		dmPost := &model.Post{}
 		dmText := fmt.Sprintf("@%s granted you the %s`%s` badge.", granterUser.Username, image, b.Name)
 		if reason != "" {
 			dmText += "\nWhy? " + reason
@@ -137,8 +137,8 @@ func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, grante
 			Title: fmt.Sprintf("%sbadge granted!", image),
 			Text:  dmText,
 		}
-		model.ParseSlackAttachment(&dmPost, []*model.SlackAttachment{&dmAttachment})
-		err := p.mm.Post.DM(p.BotUserID, granted.Id, &dmPost)
+		model.ParseSlackAttachment(dmPost, []*model.SlackAttachment{&dmAttachment})
+		err := p.mm.Post.DM(p.BotUserID, granted.Id, dmPost)
 		if err != nil {
 			p.mm.Log.Debug("dm error", "err", err)
 		}

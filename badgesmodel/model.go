@@ -29,21 +29,21 @@ type Badge struct {
 }
 
 type UserBadge struct {
-	Badge
+	*Badge
 	Ownership
 	GrantedByUsername string `json:"granted_by_name"`
 	TypeName          string `json:"type_name"`
 }
 
 type BadgeDetails struct {
-	Badge
+	*Badge
 	Owners            []Ownership `json:"owners"`
 	CreatedByUsername string      `json:"created_by_username"`
 	TypeName          string      `json:"type_name"`
 }
 
 type AllBadgesBadge struct {
-	Badge
+	*Badge
 	Granted      int    `json:"granted"`
 	GrantedTimes int    `json:"granted_times"`
 	TypeName     string `json:"type_name"`
@@ -65,12 +65,12 @@ type PermissionScheme struct {
 	BlockList map[string]bool `json:"block_list"`
 }
 
-type BadgeTypeList []BadgeTypeDefinition
+type BadgeTypeList []*BadgeTypeDefinition
 
 type ImageType string
 
 type EnsureBadgesRequest struct {
-	Badges []Badge
+	Badges []*Badge
 	BotID  string
 }
 
@@ -104,7 +104,7 @@ func (l OwnershipList) IsOwned(user string, badge BadgeID) bool {
 func (l BadgeTypeList) GetType(id BadgeType) *BadgeTypeDefinition {
 	for _, t := range l {
 		if t.ID == id {
-			return &t
+			return t
 		}
 	}
 
