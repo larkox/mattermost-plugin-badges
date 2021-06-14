@@ -23,7 +23,13 @@ const UserBadgeRow: React.FC<Props> = ({badge, onClick, isCurrentUser}: Props) =
     let setStatus = null;
     const c = new Client4();
     if (isCurrentUser && badge.image_type === 'emoji') {
-        setStatus = (<div className='user-badge-set-status'><a onClick={() => c.updateCustomStatus({emoji: badge.image, text: badge.name})}>{'Set status to this badge'}</a></div>);
+        setStatus = (
+            <div className='user-badge-set-status'>
+                <a onClick={() => c.updateCustomStatus({emoji: badge.image, text: badge.name})}>
+                    {'Set status to this badge'}
+                </a>
+            </div>
+        );
     }
     return (
         <div className='UserBadgesRow'>

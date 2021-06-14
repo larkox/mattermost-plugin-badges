@@ -1,7 +1,5 @@
 import React from 'react';
 
-import Scrollbars from 'react-custom-scrollbars';
-
 import {BadgeID, AllBadgesBadge} from '../../types/badges';
 import Client from '../../client/api';
 
@@ -9,6 +7,7 @@ import {RHSState} from '../../types/general';
 import {RHS_STATE_DETAIL} from '../../constants';
 
 import AllBadgesRow from './all_badges_row';
+import RHSScrollbars from './rhs_scrollbars';
 
 import './all_badges.scss';
 
@@ -22,30 +21,6 @@ type Props = {
 type State = {
     loading: boolean;
     badges?: AllBadgesBadge[];
-}
-
-function renderView(props: any) {
-    return (
-        <div
-            {...props}
-            className='scrollbar--view'
-        />);
-}
-
-function renderThumbHorizontal(props: any) {
-    return (
-        <div
-            {...props}
-            className='scrollbar--horizontal'
-        />);
-}
-
-function renderThumbVertical(props: any) {
-    return (
-        <div
-            {...props}
-            className='scrollbar--vertical'
-        />);
 }
 
 class AllBadges extends React.PureComponent<Props, State> {
@@ -90,16 +65,7 @@ class AllBadges extends React.PureComponent<Props, State> {
         return (
             <div className='AllBadges'>
                 <div><b>{'All badges'}</b></div>
-                <Scrollbars
-                    autoHide={true}
-                    autoHideTimeout={500}
-                    autoHideDuration={500}
-                    renderThumbHorizontal={renderThumbHorizontal}
-                    renderThumbVertical={renderThumbVertical}
-                    renderView={renderView}
-                >
-                    {content}
-                </Scrollbars>
+                <RHSScrollbars>{content}</RHSScrollbars>
             </div>
         );
     }

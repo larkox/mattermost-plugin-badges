@@ -1,8 +1,6 @@
 import {UserProfile} from 'mattermost-redux/types/users';
 import React from 'react';
 
-import Scrollbars from 'react-custom-scrollbars';
-
 import {BadgeID, UserBadge} from '../../types/badges';
 import Client from '../../client/api';
 
@@ -10,6 +8,7 @@ import {RHSState} from 'types/general';
 import {RHS_STATE_DETAIL} from '../../constants';
 
 import UserBadgeRow from './user_badge_row';
+import RHSScrollbars from './rhs_scrollbars';
 
 import './user_badges.scss';
 
@@ -25,30 +24,6 @@ type Props = {
 type State = {
     loading: boolean;
     badges?: UserBadge[];
-}
-
-function renderView(props: any) {
-    return (
-        <div
-            {...props}
-            className='scrollbar--view'
-        />);
-}
-
-function renderThumbHorizontal(props: any) {
-    return (
-        <div
-            {...props}
-            className='scrollbar--horizontal'
-        />);
-}
-
-function renderThumbVertical(props: any) {
-    return (
-        <div
-            {...props}
-            className='scrollbar--vertical'
-        />);
 }
 
 class UserBadges extends React.PureComponent<Props, State> {
@@ -80,6 +55,10 @@ class UserBadges extends React.PureComponent<Props, State> {
         }
 
         const c = new Client();
+        if (!this.state.loading) {
+            this.setState({loading: true});
+        }
+
         c.getUserBadges(this.props.user.id).then((badges) => {
             this.setState({badges, loading: false});
         });
@@ -121,16 +100,7 @@ class UserBadges extends React.PureComponent<Props, State> {
         return (
             <div className='UserBadges'>
                 <div><b>{title}</b></div>
-                <Scrollbars
-                    autoHide={true}
-                    autoHideTimeout={500}
-                    autoHideDuration={500}
-                    renderThumbHorizontal={renderThumbHorizontal}
-                    renderThumbVertical={renderThumbVertical}
-                    renderView={renderView}
-                >
-                    {content}
-                </Scrollbars>
+                <RHSScrollbars>{content}</RHSScrollbars>
             </div>
         );
     }

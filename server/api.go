@@ -483,7 +483,7 @@ func (p *Plugin) dialogEditBadge(w http.ResponseWriter, r *http.Request, userID 
 		return
 	}
 
-	if image[0] == ':' {
+	if length := len(image); length > 1 && image[0] == ':' && image[length-1] == ':' {
 		image = image[1 : len(image)-1]
 	}
 	if image == "" {
@@ -730,7 +730,7 @@ func (p *Plugin) grantBadge(w http.ResponseWriter, r *http.Request, pluginID str
 		}
 	}
 
-	_, _ = w.Write([]byte("OK"))
+	_, _ = w.Write([]byte(`{"sucess": true}`))
 }
 
 func (p *Plugin) ensureBadges(w http.ResponseWriter, r *http.Request, pluginID string) {

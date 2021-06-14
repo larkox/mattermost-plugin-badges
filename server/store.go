@@ -43,9 +43,6 @@ type Store interface {
 
 	// PAPI
 	EnsureBadges(badges []*badgesmodel.Badge, pluginID, botID string) ([]*badgesmodel.Badge, error)
-
-	// DEBUG
-	DebugGetTypes() badgesmodel.BadgeTypeList
 }
 
 type store struct {
@@ -109,10 +106,6 @@ func (s *store) EnsureBadges(badges []*badgesmodel.Badge, pluginID, botID string
 	}
 
 	return out, nil
-}
-func (s *store) DebugGetTypes() badgesmodel.BadgeTypeList {
-	l, _ := s.getAllTypes()
-	return l
 }
 
 func (s *store) AddBadge(b *badgesmodel.Badge) (*badgesmodel.Badge, error) {
