@@ -210,7 +210,7 @@ func (s *store) GetAllBadges() ([]*badgesmodel.AllBadgesBadge, error) {
 	out := []*badgesmodel.AllBadgesBadge{}
 	for _, b := range badges {
 		badge := &badgesmodel.AllBadgesBadge{
-			Badge: b,
+			Badge: *b,
 		}
 		grantedTo := map[string]bool{}
 		for _, o := range ownership {
@@ -382,7 +382,7 @@ func (s *store) GetBadgeDetails(id badgesmodel.BadgeID) (*badgesmodel.BadgeDetai
 		typeName = t.Name
 	}
 	return &badgesmodel.BadgeDetails{
-		Badge:             badge,
+		Badge:             *badge,
 		Owners:            owners,
 		CreatedByUsername: createdByName,
 		TypeName:          typeName,
@@ -504,7 +504,7 @@ func (s *store) GetUserBadges(userID string) ([]*badgesmodel.UserBadge, error) {
 				typeName = t.Name
 			}
 
-			out = append([]*badgesmodel.UserBadge{{Badge: badge, Ownership: o, GrantedByUsername: grantedByName, TypeName: typeName}}, out...)
+			out = append([]*badgesmodel.UserBadge{{Badge: *badge, Ownership: o, GrantedByUsername: grantedByName, TypeName: typeName}}, out...)
 		}
 	}
 

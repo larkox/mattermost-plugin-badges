@@ -29,21 +29,21 @@ type Badge struct {
 }
 
 type UserBadge struct {
-	*Badge
+	Badge
 	Ownership
 	GrantedByUsername string `json:"granted_by_name"`
 	TypeName          string `json:"type_name"`
 }
 
 type BadgeDetails struct {
-	*Badge
+	Badge
 	Owners            []Ownership `json:"owners"`
 	CreatedByUsername string      `json:"created_by_username"`
 	TypeName          string      `json:"type_name"`
 }
 
 type AllBadgesBadge struct {
-	*Badge
+	Badge
 	Granted      int    `json:"granted"`
 	GrantedTimes int    `json:"granted_times"`
 	TypeName     string `json:"type_name"`
