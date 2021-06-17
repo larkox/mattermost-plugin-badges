@@ -20,10 +20,8 @@ type Store interface {
 	GetBadgeDetails(badgeID badgesmodel.BadgeID) (*badgesmodel.BadgeDetails, error)
 
 	// Autocomplete
-	GetGrantSuggestions(user *model.User) ([]*badgesmodel.Badge, error)
-	GetEditTypeSuggestions(user *model.User) (badgesmodel.BadgeTypeList, error)
-	GetTypeSuggestions(user *model.User) (badgesmodel.BadgeTypeList, error)
-	GetEditBadgeSuggestions(user *model.User) ([]*badgesmodel.Badge, error)
+	GetRawBadges() ([]*badgesmodel.Badge, error)
+	GetRawTypes() (badgesmodel.BadgeTypeList, error)
 
 	// API
 	AddBadge(badge *badgesmodel.Badge) (*badgesmodel.Badge, error)
@@ -113,11 +111,6 @@ func (s *store) AddBadge(b *badgesmodel.Badge) (*badgesmodel.Badge, error) {
 		return nil, errInvalidBadge
 	}
 
-	u, appErr := s.api.GetUser(b.CreatedBy)
-	if appErr != nil {
-		return nil, appErr
-	}
-
 	badgeTypes, err := s.getAllTypes()
 	if err != nil {
 		return nil, err
@@ -128,20 +121,12 @@ func (s *store) AddBadge(b *badgesmodel.Badge) (*badgesmodel.Badge, error) {
 		return nil, errors.New("missing badge type")
 	}
 
-	if !canCreateBadge(u, t) {
-		return nil, errors.New("you have no permission to create this type of badge")
-	}
-
 	badgeList, err := s.getAllBadges()
 	if err != nil {
 		return nil, err
 	}
 
-	var lastID badgesmodel.BadgeID = -1
-	if len(badgeList) > 0 {
-		lastID = badgeList[len(badgeList)-1].ID
-	}
-	b.ID = lastID + 1
+	b.ID = badgesmodel.BadgeID(model.NewId())
 	badgeList = append(badgeList, b)
 
 	data, err := json.Marshal(badgeList)
@@ -149,7 +134,7 @@ func (s *store) AddBadge(b *badgesmodel.Badge) (*badgesmodel.Badge, error) {
 		return nil, err
 	}
 
-	appErr = s.api.KVSet(KVKeyBadges, data)
+	appErr := s.api.KVSet(KVKeyBadges, data)
 	if appErr != nil {
 		return nil, appErr
 	}
@@ -162,25 +147,12 @@ func (s *store) AddType(t *badgesmodel.BadgeTypeDefinition) (*badgesmodel.BadgeT
 }
 
 func (s *store) addType(t *badgesmodel.BadgeTypeDefinition, isPlugin bool) (*badgesmodel.BadgeTypeDefinition, error) {
-	u, appErr := s.api.GetUser(t.CreatedBy)
-	if appErr != nil {
-		return nil, appErr
-	}
-
-	if !canCreateType(u, isPlugin) {
-		return nil, errors.New("you have no permission to create this badge type")
-	}
-
 	badgeTypes, err := s.getAllTypes()
 	if err != nil {
 		return nil, err
 	}
 
-	var lastID badgesmodel.BadgeType = -1
-	if len(badgeTypes) > 0 {
-		lastID = badgeTypes[len(badgeTypes)-1].ID
-	}
-	t.ID = lastID + 1
+	t.ID = badgesmodel.BadgeType(model.NewId())
 	badgeTypes = append(badgeTypes, t)
 
 	data, err := json.Marshal(badgeTypes)
@@ -188,7 +160,7 @@ func (s *store) addType(t *badgesmodel.BadgeTypeDefinition, isPlugin bool) (*bad
 		return nil, err
 	}
 
-	appErr = s.api.KVSet(KVKeyTypes, data)
+	appErr := s.api.KVSet(KVKeyTypes, data)
 	if appErr != nil {
 		return nil, appErr
 	}
@@ -236,78 +208,12 @@ func (s *store) GetAllBadges() ([]*badgesmodel.AllBadgesBadge, error) {
 	return out, nil
 }
 
-func (s *store) GetGrantSuggestions(user *model.User) ([]*badgesmodel.Badge, error) {
-	badges, err := s.getAllBadges()
-	if err != nil {
-		return nil, err
-	}
-
-	types, err := s.getAllTypes()
-	if err != nil {
-		return nil, err
-	}
-
-	out := []*badgesmodel.Badge{}
-	for _, b := range badges {
-		badgeType := types.GetType(b.Type)
-		if badgeType == nil {
-			s.api.LogDebug("Badge with missing type", "badge", b)
-			break
-		}
-		if canGrantBadge(user, b, badgeType) {
-			out = append(out, b)
-		}
-	}
-
-	return out, nil
+func (s *store) GetRawBadges() ([]*badgesmodel.Badge, error) {
+	return s.getAllBadges()
 }
 
-func (s *store) GetTypeSuggestions(user *model.User) (badgesmodel.BadgeTypeList, error) {
-	types, err := s.getAllTypes()
-	if err != nil {
-		return nil, err
-	}
-
-	out := badgesmodel.BadgeTypeList{}
-	for _, t := range types {
-		if canCreateBadge(user, t) {
-			out = append(out, t)
-		}
-	}
-
-	return out, nil
-}
-
-func (s *store) GetEditTypeSuggestions(user *model.User) (badgesmodel.BadgeTypeList, error) {
-	types, err := s.getAllTypes()
-	if err != nil {
-		return nil, err
-	}
-
-	out := badgesmodel.BadgeTypeList{}
-	for _, t := range types {
-		if canEditType(user, t) {
-			out = append(out, t)
-		}
-	}
-
-	return out, nil
-}
-
-func (s *store) GetEditBadgeSuggestions(user *model.User) ([]*badgesmodel.Badge, error) {
-	bb, err := s.getAllBadges()
-	if err != nil {
-		return nil, err
-	}
-
-	out := []*badgesmodel.Badge{}
-	for _, b := range bb {
-		if canEditBadge(user, b) {
-			out = append(out, b)
-		}
-	}
-
-	return out, nil
+func (s *store) GetRawTypes() (badgesmodel.BadgeTypeList, error) {
+	return s.getAllTypes()
 }
 
 func (s *store) getAllTypes() (badgesmodel.BadgeTypeList, error) {
@@ -422,35 +328,21 @@ func (s *store) GrantBadge(id badgesmodel.BadgeID, userID string, grantedBy stri
 		return false, errors.New("badge type not found")
 	}
 
-	user, appErr := s.api.GetUser(userID)
-	if appErr != nil {
-		return false, err
-	}
-
-	grantedByUser, appErr := s.api.GetUser(grantedBy)
-	if appErr != nil {
-		return false, err
-	}
-
-	if !canGrantBadge(grantedByUser, badge, badgeType) {
-		return false, errors.New("you don't have permission to grant this badge")
-	}
-
 	ownership, err := s.getOwnershipList()
 	if err != nil {
 		return false, err
 	}
 
-	if !badge.Multiple && ownership.IsOwned(user.Id, id) {
+	if !badge.Multiple && ownership.IsOwned(userID, id) {
 		return false, nil
 	}
 
 	ownership = append(ownership, badgesmodel.Ownership{
-		User:      user.Id,
+		User:      userID,
 		Badge:     badge.ID,
 		Time:      time.Now(),
 		Reason:    reason,
-		GrantedBy: grantedByUser.Id,
+		GrantedBy: grantedBy,
 	})
 
 	data, err := json.Marshal(ownership)
@@ -458,7 +350,7 @@ func (s *store) GrantBadge(id badgesmodel.BadgeID, userID string, grantedBy stri
 		return false, err
 	}
 
-	appErr = s.api.KVSet(KVKeyOwnership, data)
+	appErr := s.api.KVSet(KVKeyOwnership, data)
 	if appErr != nil {
 		return false, appErr
 	}

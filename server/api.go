@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
-	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -100,6 +99,12 @@ func (p *Plugin) dialogCreateBadge(w http.ResponseWriter, r *http.Request, userI
 		return
 	}
 
+	user, err := p.mm.User.Get(userID)
+	if err != nil {
+		dialogError(w, "could not get the user", nil)
+		return
+	}
+
 	toCreate := &badgesmodel.Badge{}
 	toCreate.CreatedBy = userID
 	toCreate.ImageType = badgesmodel.ImageTypeEmoji
@@ -138,14 +143,19 @@ func (p *Plugin) dialogCreateBadge(w http.ResponseWriter, r *http.Request, userI
 		return
 	}
 
-	badgeType, err := strconv.Atoi(badgeTypeStr)
+	toCreate.Type = badgesmodel.BadgeType(badgeTypeStr)
+	toCreate.Multiple = getDialogSubmissionBoolField(req, DialogFieldBadgeMultiple)
+
+	t, err := p.store.GetType(badgesmodel.BadgeType(badgeTypeStr))
 	if err != nil {
-		dialogError(w, "Invalid field", map[string]string{"type": "Invalid type"})
+		dialogError(w, "this type does not exist", nil)
 		return
 	}
-	toCreate.Type = badgesmodel.BadgeType(badgeType)
 
-	toCreate.Multiple = getDialogSubmissionBoolField(req, DialogFieldBadgeMultiple)
+	if !canCreateBadge(user, p.badgeAdminUserID, t) {
+		dialogError(w, "you have no permissions to create this badge", nil)
+		return
+	}
 
 	_, err = p.store.AddBadge(toCreate)
 	if err != nil {
@@ -168,6 +178,18 @@ func (p *Plugin) dialogCreateType(w http.ResponseWriter, r *http.Request, userID
 		dialogError(w, "could not get the dialog request", nil)
 		return
 	}
+
+	u, err := p.mm.User.Get(userID)
+	if err != nil {
+		dialogError(w, "cannot get user", nil)
+		return
+	}
+
+	if !canCreateType(u, p.badgeAdminUserID, false) {
+		dialogError(w, "you have no permissions to create a type", nil)
+		return
+	}
+
 	toCreate := &badgesmodel.BadgeTypeDefinition{}
 	toCreate.CreatedBy = userID
 	toCreate.CanCreate.Everyone = getDialogSubmissionBoolField(req, DialogFieldTypeEveryoneCanCreate)
@@ -216,7 +238,7 @@ func (p *Plugin) dialogCreateType(w http.ResponseWriter, r *http.Request, userID
 		}
 	}
 
-	_, err := p.store.AddType(toCreate)
+	_, err = p.store.AddType(toCreate)
 	if err != nil {
 		dialogError(w, err.Error(), nil)
 		return
@@ -245,13 +267,7 @@ func (p *Plugin) dialogSelectType(w http.ResponseWriter, r *http.Request, userID
 		return
 	}
 
-	badgeType, err := strconv.Atoi(badgeTypeStr)
-	if err != nil {
-		dialogError(w, "Invalid field", map[string]string{DialogFieldBadgeType: "Invalid type"})
-		return
-	}
-
-	t, err := p.store.GetType(badgesmodel.BadgeType(badgeType))
+	t, err := p.store.GetType(badgesmodel.BadgeType(badgeTypeStr))
 	if err != nil {
 		dialogError(w, "Cannot get type", map[string]string{DialogFieldBadgeType: "cannot get type"})
 		return
@@ -263,7 +279,7 @@ func (p *Plugin) dialogSelectType(w http.ResponseWriter, r *http.Request, userID
 		return
 	}
 
-	if !canEditType(u, t) {
+	if !canEditType(u, p.badgeAdminUserID, t) {
 		dialogError(w, "You cannot edit this type", nil)
 		return
 	}
@@ -291,11 +307,7 @@ func (p *Plugin) dialogEditType(w http.ResponseWriter, r *http.Request, userID s
 		return
 	}
 
-	originalTypeID, err := strconv.Atoi(req.State)
-	if err != nil {
-		dialogError(w, "type id not found", nil)
-		return
-	}
+	originalTypeID := req.State
 
 	originalType, err := p.store.GetType(badgesmodel.BadgeType(originalTypeID))
 	if err != nil {
@@ -303,7 +315,7 @@ func (p *Plugin) dialogEditType(w http.ResponseWriter, r *http.Request, userID s
 		return
 	}
 
-	if !canEditType(u, originalType) {
+	if !canEditType(u, p.badgeAdminUserID, originalType) {
 		dialogError(w, "you have no permissions to edit this type", nil)
 		return
 	}
@@ -392,13 +404,7 @@ func (p *Plugin) dialogSelectBadge(w http.ResponseWriter, r *http.Request, userI
 		return
 	}
 
-	badgeID, err := strconv.Atoi(badgeIDStr)
-	if err != nil {
-		dialogError(w, "Invalid field", map[string]string{DialogFieldBadge: "Invalid badge"})
-		return
-	}
-
-	b, err := p.store.GetBadge(badgesmodel.BadgeID(badgeID))
+	b, err := p.store.GetBadge(badgesmodel.BadgeID(badgeIDStr))
 	if err != nil {
 		dialogError(w, "Cannot get type", map[string]string{DialogFieldBadge: "cannot get badge"})
 		return
@@ -410,7 +416,7 @@ func (p *Plugin) dialogSelectBadge(w http.ResponseWriter, r *http.Request, userI
 		return
 	}
 
-	if !canEditBadge(u, b) {
+	if !canEditBadge(u, p.badgeAdminUserID, b) {
 		dialogError(w, "You cannot edit this badge", nil)
 		return
 	}
@@ -438,11 +444,7 @@ func (p *Plugin) dialogEditBadge(w http.ResponseWriter, r *http.Request, userID 
 		return
 	}
 
-	originalBadgeID, err := strconv.Atoi(req.State)
-	if err != nil {
-		dialogError(w, "badge id not found", nil)
-		return
-	}
+	originalBadgeID := req.State
 
 	originalBadge, err := p.store.GetBadge(badgesmodel.BadgeID(originalBadgeID))
 	if err != nil {
@@ -450,7 +452,7 @@ func (p *Plugin) dialogEditBadge(w http.ResponseWriter, r *http.Request, userID 
 		return
 	}
 
-	if !canEditBadge(u, originalBadge) {
+	if !canEditBadge(u, p.badgeAdminUserID, originalBadge) {
 		dialogError(w, "you have no permissions to edit this type", nil)
 		return
 	}
@@ -498,12 +500,7 @@ func (p *Plugin) dialogEditBadge(w http.ResponseWriter, r *http.Request, userID 
 		return
 	}
 
-	badgeType, err := strconv.Atoi(badgeTypeStr)
-	if err != nil {
-		dialogError(w, "Invalid field", map[string]string{"type": "Invalid type"})
-		return
-	}
-	originalBadge.Type = badgesmodel.BadgeType(badgeType)
+	originalBadge.Type = badgesmodel.BadgeType(badgeTypeStr)
 
 	originalBadge.Multiple = getDialogSubmissionBoolField(req, DialogFieldBadgeMultiple)
 
@@ -537,15 +534,26 @@ func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID stri
 
 	notifyHere := getDialogSubmissionBoolField(req, DialogFieldNotifyHere)
 
-	badgeID, err := strconv.Atoi(badgeIDStr)
+	badge, err := p.store.GetBadge(badgesmodel.BadgeID(badgeIDStr))
 	if err != nil {
-		dialogError(w, "Invalid field", map[string]string{DialogFieldBadge: "Invalid badge"})
+		dialogError(w, "badge not found", nil)
 		return
 	}
 
-	badge, err := p.store.GetBadgeDetails(badgesmodel.BadgeID(badgeID))
+	granter, err := p.mm.User.Get(userID)
 	if err != nil {
-		dialogError(w, "badge not found", nil)
+		dialogError(w, err.Error(), nil)
+		return
+	}
+
+	badgeType, err := p.store.GetType(badge.Type)
+	if err != nil {
+		dialogError(w, err.Error(), nil)
+		return
+	}
+
+	if !canGrantBadge(granter, p.badgeAdminUserID, badge, badgeType) {
+		dialogError(w, "you have no permissions to grant this badge", nil)
 		return
 	}
 
@@ -566,7 +574,7 @@ func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID stri
 
 	reason, _ := req.Submission[DialogFieldGrantReason].(string)
 
-	shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeID), grantToID, userID, reason)
+	shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeIDStr), grantToID, userID, reason)
 	if err != nil {
 		p.writeAPIError(w, &APIErrorResponse{
 			ID:         "cannot grant badge",
@@ -577,7 +585,7 @@ func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID stri
 	}
 
 	if shouldNotify {
-		p.notifyGrant(badgesmodel.BadgeID(badgeID), userID, grantToUser, notifyHere, req.ChannelId, reason)
+		p.notifyGrant(badgesmodel.BadgeID(badgeIDStr), userID, grantToUser, notifyHere, req.ChannelId, reason)
 	}
 
 	p.mm.Post.SendEphemeralPost(userID, &model.Post{
@@ -602,7 +610,7 @@ func (p *Plugin) dialogCreateSubscription(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if !canCreateSubscription(u, req.ChannelId) {
+	if !canCreateSubscription(u, p.badgeAdminUserID, req.ChannelId) {
 		dialogError(w, "You cannot create a subscription", nil)
 		return
 	}
@@ -613,13 +621,7 @@ func (p *Plugin) dialogCreateSubscription(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	typeID, err := strconv.Atoi(typeIDStr)
-	if err != nil {
-		dialogError(w, "Invalid field", map[string]string{DialogFieldBadgeType: "Invalid type"})
-		return
-	}
-
-	err = p.store.AddSubscription(badgesmodel.BadgeType(typeID), req.ChannelId)
+	err = p.store.AddSubscription(badgesmodel.BadgeType(typeIDStr), req.ChannelId)
 	if err != nil {
 		dialogError(w, err.Error(), nil)
 	}
@@ -646,7 +648,7 @@ func (p *Plugin) dialogDeleteSubscription(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if !canCreateSubscription(u, req.ChannelId) {
+	if !canCreateSubscription(u, p.badgeAdminUserID, req.ChannelId) {
 		dialogError(w, "You cannot delete a subscription", nil)
 		return
 	}
@@ -657,13 +659,7 @@ func (p *Plugin) dialogDeleteSubscription(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	typeID, err := strconv.Atoi(typeIDStr)
-	if err != nil {
-		dialogError(w, "Invalid field", map[string]string{DialogFieldBadgeType: "Invalid type"})
-		return
-	}
-
-	err = p.store.RemoveSubscriptions(badgesmodel.BadgeType(typeID), req.ChannelId)
+	err = p.store.RemoveSubscriptions(badgesmodel.BadgeType(typeIDStr), req.ChannelId)
 	if err != nil {
 		dialogError(w, err.Error(), nil)
 	}
@@ -710,6 +706,45 @@ func (p *Plugin) grantBadge(w http.ResponseWriter, r *http.Request, pluginID str
 			ID:         "missing request",
 			Message:    "Missing grant request on request body",
 			StatusCode: http.StatusInternalServerError,
+		})
+		return
+	}
+
+	granter, err := p.mm.User.Get(req.BotID)
+	if err != nil {
+		p.writeAPIError(w, &APIErrorResponse{
+			ID:         "cannot get user",
+			Message:    err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		})
+		return
+	}
+
+	badge, err := p.store.GetBadge(badgesmodel.BadgeID(req.BadgeID))
+	if err != nil {
+		p.writeAPIError(w, &APIErrorResponse{
+			ID:         "cannot get badge",
+			Message:    err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		})
+		return
+	}
+
+	badgeType, err := p.store.GetType(badge.Type)
+	if err != nil {
+		p.writeAPIError(w, &APIErrorResponse{
+			ID:         "cannot get type",
+			Message:    err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		})
+		return
+	}
+
+	if !canGrantBadge(granter, p.badgeAdminUserID, badge, badgeType) {
+		p.writeAPIError(w, &APIErrorResponse{
+			ID:         "cannot grant badge",
+			Message:    "you have no permissions to grant this badge",
+			StatusCode: http.StatusUnauthorized,
 		})
 		return
 	}
@@ -785,7 +820,7 @@ func (p *Plugin) getBadgeSuggestions(w http.ResponseWriter, r *http.Request, act
 		return
 	}
 
-	bb, err := p.store.GetGrantSuggestions(u)
+	bb, err := p.filterGrantBadges(u)
 	if err != nil {
 		p.mm.Log.Debug("Error getting suggestions", "error", err)
 		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
@@ -794,7 +829,7 @@ func (p *Plugin) getBadgeSuggestions(w http.ResponseWriter, r *http.Request, act
 
 	for _, b := range bb {
 		s := model.AutocompleteListItem{
-			Item:     strconv.Itoa(int(b.ID)),
+			Item:     string(b.ID),
 			Hint:     b.Name,
 			HelpText: b.Description,
 		}
@@ -813,7 +848,7 @@ func (p *Plugin) getEditBadgeSuggestions(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	bb, err := p.store.GetEditBadgeSuggestions(u)
+	bb, err := p.filterEditBadges(u)
 	if err != nil {
 		p.mm.Log.Debug("Error getting suggestions", "error", err)
 		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
@@ -822,7 +857,7 @@ func (p *Plugin) getEditBadgeSuggestions(w http.ResponseWriter, r *http.Request,
 
 	for _, b := range bb {
 		s := model.AutocompleteListItem{
-			Item:     strconv.Itoa(int(b.ID)),
+			Item:     string(b.ID),
 			Hint:     b.Name,
 			HelpText: b.Description,
 		}
@@ -841,7 +876,7 @@ func (p *Plugin) getBadgeTypeSuggestions(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	types, err := p.store.GetTypeSuggestions(u)
+	types, err := p.filterCreateBadgeTypes(u)
 	if err != nil {
 		p.mm.Log.Debug("Error getting suggestions", "error", err)
 		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
@@ -850,7 +885,7 @@ func (p *Plugin) getBadgeTypeSuggestions(w http.ResponseWriter, r *http.Request,
 
 	for _, t := range types {
 		s := model.AutocompleteListItem{
-			Item: strconv.Itoa(int(t.ID)),
+			Item: string(t.ID),
 			Hint: t.Name,
 		}
 
@@ -868,7 +903,7 @@ func (p *Plugin) getEditBadgeTypeSuggestions(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	types, err := p.store.GetEditTypeSuggestions(u)
+	types, err := p.filterEditTypes(u)
 	if err != nil {
 		p.mm.Log.Debug("Error getting suggestions", "error", err)
 		_, _ = w.Write(model.AutocompleteStaticListItemsToJSON(out))
@@ -877,7 +912,7 @@ func (p *Plugin) getEditBadgeTypeSuggestions(w http.ResponseWriter, r *http.Requ
 
 	for _, t := range types {
 		s := model.AutocompleteListItem{
-			Item: strconv.Itoa(int(t.ID)),
+			Item: string(t.ID),
 			Hint: t.Name,
 		}
 
@@ -911,15 +946,7 @@ func (p *Plugin) getBadgeDetails(w http.ResponseWriter, r *http.Request, actingU
 		return
 	}
 
-	badgeIDNumber, err := strconv.Atoi(badgeIDString)
-	if err != nil {
-		errMessage := "Cannot convert badgeID to number"
-		p.mm.Log.Debug(errMessage, "badgeID", badgeIDString, "err", err)
-		_, _ = w.Write([]byte(errMessage))
-		return
-	}
-
-	badgeID := badgesmodel.BadgeID(badgeIDNumber)
+	badgeID := badgesmodel.BadgeID(badgeIDString)
 
 	badge, err := p.store.GetBadgeDetails(badgeID)
 	if err != nil {

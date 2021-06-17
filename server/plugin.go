@@ -22,10 +22,11 @@ type Plugin struct {
 	// setConfiguration for usage.
 	configuration *configuration
 
-	mm        *pluginapi.Client
-	BotUserID string
-	store     Store
-	router    *mux.Router
+	mm               *pluginapi.Client
+	BotUserID        string
+	store            Store
+	router           *mux.Router
+	badgeAdminUserID string
 }
 
 // ServeHTTP demonstrates a plugin that handles HTTP requests by greeting the world.

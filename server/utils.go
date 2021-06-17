@@ -23,7 +23,11 @@ func areRolesAllowed(userRoles []string, allowedRoles map[string]bool) bool {
 	return false
 }
 
-func canGrantBadge(user *model.User, badge *badgesmodel.Badge, badgeType *badgesmodel.BadgeTypeDefinition) bool {
+func canGrantBadge(user *model.User, badgeAdminID string, badge *badgesmodel.Badge, badgeType *badgesmodel.BadgeTypeDefinition) bool {
+	if badgeAdminID != "" && user.Id == badgeAdminID {
+		return true
+	}
+
 	if user.IsSystemAdmin() {
 		return true
 	}
@@ -53,7 +57,11 @@ func canGrantBadge(user *model.User, badge *badgesmodel.Badge, badgeType *badges
 	return badgeType.CanGrant.Everyone
 }
 
-func canCreateBadge(user *model.User, badgeType *badgesmodel.BadgeTypeDefinition) bool {
+func canCreateBadge(user *model.User, badgeAdminID string, badgeType *badgesmodel.BadgeTypeDefinition) bool {
+	if badgeAdminID != "" && user.Id == badgeAdminID {
+		return true
+	}
+
 	if user.IsSystemAdmin() {
 		return true
 	}
@@ -79,23 +87,39 @@ func canCreateBadge(user *model.User, badgeType *badgesmodel.BadgeTypeDefinition
 	return badgeType.CanCreate.Everyone
 }
 
-func canEditType(user *model.User, badgeType *badgesmodel.BadgeTypeDefinition) bool {
-	return user.IsSystemAdmin()
-}
-
-func canEditBadge(user *model.User, badge *badgesmodel.Badge) bool {
-	return user.IsSystemAdmin() || user.Id == badge.CreatedBy
-}
-
-func canCreateType(user *model.User, isPlugin bool) bool {
-	if isPlugin {
+func canEditType(user *model.User, badgeAdminID string, badgeType *badgesmodel.BadgeTypeDefinition) bool {
+	if badgeAdminID != "" && user.Id == badgeAdminID {
 		return true
 	}
 
 	return user.IsSystemAdmin()
 }
 
-func canCreateSubscription(user *model.User, channelID string) bool {
+func canEditBadge(user *model.User, badgeAdminID string, badge *badgesmodel.Badge) bool {
+	if badgeAdminID != "" && user.Id == badgeAdminID {
+		return true
+	}
+
+	return user.IsSystemAdmin() || user.Id == badge.CreatedBy
+}
+
+func canCreateType(user *model.User, badgeAdminID string, isPlugin bool) bool {
+	if isPlugin {
+		return true
+	}
+
+	if badgeAdminID != "" && user.Id == badgeAdminID {
+		return true
+	}
+
+	return user.IsSystemAdmin()
+}
+
+func canCreateSubscription(user *model.User, badgeAdminID string, channelID string) bool {
+	if badgeAdminID != "" && user.Id == badgeAdminID {
+		return true
+	}
+
 	return user.IsSystemAdmin()
 }
 
