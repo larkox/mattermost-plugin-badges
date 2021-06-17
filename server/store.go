@@ -54,7 +54,7 @@ func NewStore(api plugin.API) Store {
 }
 
 func (s *store) EnsureBadges(badges []*badgesmodel.Badge, pluginID, botID string) ([]*badgesmodel.Badge, error) {
-	l, err := s.getAllTypes()
+	l, _, err := s.getAllTypes()
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (s *store) EnsureBadges(badges []*badgesmodel.Badge, pluginID, botID string
 		}
 	}
 
-	bb, err := s.getAllBadges()
+	bb, _, err := s.getAllBadges()
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (s *store) AddBadge(b *badgesmodel.Badge) (*badgesmodel.Badge, error) {
 		return nil, errInvalidBadge
 	}
 
-	badgeTypes, err := s.getAllTypes()
+	badgeTypes, _, err := s.getAllTypes()
 	if err != nil {
 		return nil, err
 	}
@@ -121,22 +121,10 @@ func (s *store) AddBadge(b *badgesmodel.Badge) (*badgesmodel.Badge, error) {
 		return nil, errors.New("missing badge type")
 	}
 
-	badgeList, err := s.getAllBadges()
-	if err != nil {
-		return nil, err
-	}
-
 	b.ID = badgesmodel.BadgeID(model.NewId())
-	badgeList = append(badgeList, b)
-
-	data, err := json.Marshal(badgeList)
+	err = s.doAtomic(func() (bool, error) { return s.atomicAddBadge(b) })
 	if err != nil {
 		return nil, err
-	}
-
-	appErr := s.api.KVSet(KVKeyBadges, data)
-	if appErr != nil {
-		return nil, appErr
 	}
 
 	return b, nil
@@ -147,34 +135,22 @@ func (s *store) AddType(t *badgesmodel.BadgeTypeDefinition) (*badgesmodel.BadgeT
 }
 
 func (s *store) addType(t *badgesmodel.BadgeTypeDefinition, isPlugin bool) (*badgesmodel.BadgeTypeDefinition, error) {
-	badgeTypes, err := s.getAllTypes()
-	if err != nil {
-		return nil, err
-	}
-
 	t.ID = badgesmodel.BadgeType(model.NewId())
-	badgeTypes = append(badgeTypes, t)
-
-	data, err := json.Marshal(badgeTypes)
+	err := s.doAtomic(func() (bool, error) { return s.atomicAddType(t) })
 	if err != nil {
 		return nil, err
-	}
-
-	appErr := s.api.KVSet(KVKeyTypes, data)
-	if appErr != nil {
-		return nil, appErr
 	}
 
 	return t, nil
 }
 
 func (s *store) GetAllBadges() ([]*badgesmodel.AllBadgesBadge, error) {
-	badges, err := s.getAllBadges()
+	badges, _, err := s.getAllBadges()
 	if err != nil {
 		return nil, err
 	}
 
-	ownership, err := s.getOwnershipList()
+	ownership, _, err := s.getOwnershipList()
 	if err != nil {
 		return nil, err
 	}
@@ -209,49 +185,51 @@ func (s *store) GetAllBadges() ([]*badgesmodel.AllBadgesBadge, error) {
 }
 
 func (s *store) GetRawBadges() ([]*badgesmodel.Badge, error) {
-	return s.getAllBadges()
+	bb, _, err := s.getAllBadges()
+	return bb, err
 }
 
 func (s *store) GetRawTypes() (badgesmodel.BadgeTypeList, error) {
-	return s.getAllTypes()
+	tt, _, err := s.getAllTypes()
+	return tt, err
 }
 
-func (s *store) getAllTypes() (badgesmodel.BadgeTypeList, error) {
+func (s *store) getAllTypes() (badgesmodel.BadgeTypeList, []byte, error) {
 	data, appErr := s.api.KVGet(KVKeyTypes)
 	if appErr != nil {
-		return nil, appErr
+		return nil, nil, appErr
 	}
 
 	typeList := []*badgesmodel.BadgeTypeDefinition{}
 	if data != nil {
 		err := json.Unmarshal(data, &typeList)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return typeList, nil
+	return typeList, data, nil
 }
 
-func (s *store) getAllBadges() ([]*badgesmodel.Badge, error) {
+func (s *store) getAllBadges() ([]*badgesmodel.Badge, []byte, error) {
 	data, appErr := s.api.KVGet(KVKeyBadges)
 	if appErr != nil {
-		return nil, appErr
+		return nil, nil, appErr
 	}
 
 	badgeList := []*badgesmodel.Badge{}
 	if data != nil {
 		err := json.Unmarshal(data, &badgeList)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return badgeList, nil
+	return badgeList, data, nil
 }
 
 func (s *store) getBadge(id badgesmodel.BadgeID) (*badgesmodel.Badge, error) {
-	badgeList, err := s.getAllBadges()
+	badgeList, _, err := s.getAllBadges()
 	if err != nil {
 		return nil, err
 	}
@@ -295,21 +273,21 @@ func (s *store) GetBadgeDetails(id badgesmodel.BadgeID) (*badgesmodel.BadgeDetai
 	}, nil
 }
 
-func (s *store) getOwnershipList() (badgesmodel.OwnershipList, error) {
+func (s *store) getOwnershipList() (badgesmodel.OwnershipList, []byte, error) {
 	data, appErr := s.api.KVGet(KVKeyOwnership)
 	if appErr != nil {
-		return nil, appErr
+		return nil, nil, appErr
 	}
 
 	ownership := badgesmodel.OwnershipList{}
 	if data != nil {
 		err := json.Unmarshal(data, &ownership)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return ownership, nil
+	return ownership, data, nil
 }
 
 func (s *store) GrantBadge(id badgesmodel.BadgeID, userID string, grantedBy string, reason string) (bool, error) {
@@ -318,7 +296,7 @@ func (s *store) GrantBadge(id badgesmodel.BadgeID, userID string, grantedBy stri
 		return false, err
 	}
 
-	types, err := s.getAllTypes()
+	types, _, err := s.getAllTypes()
 	if err != nil {
 		return false, err
 	}
@@ -328,43 +306,35 @@ func (s *store) GrantBadge(id badgesmodel.BadgeID, userID string, grantedBy stri
 		return false, errors.New("badge type not found")
 	}
 
-	ownership, err := s.getOwnershipList()
-	if err != nil {
-		return false, err
-	}
-
-	if !badge.Multiple && ownership.IsOwned(userID, id) {
-		return false, nil
-	}
-
-	ownership = append(ownership, badgesmodel.Ownership{
+	ownership := badgesmodel.Ownership{
 		User:      userID,
 		Badge:     badge.ID,
 		Time:      time.Now(),
 		Reason:    reason,
 		GrantedBy: grantedBy,
-	})
+	}
 
-	data, err := json.Marshal(ownership)
+	shouldNotify := false
+	err = s.doAtomic(func() (bool, error) {
+		var done bool
+		var err error
+		shouldNotify, done, err = s.atomicAddBadgeToOwnership(ownership, badge.Multiple)
+		return done, err
+	})
 	if err != nil {
 		return false, err
 	}
 
-	appErr := s.api.KVSet(KVKeyOwnership, data)
-	if appErr != nil {
-		return false, appErr
-	}
-
-	return true, nil
+	return shouldNotify, nil
 }
 
 func (s *store) GetUserBadges(userID string) ([]*badgesmodel.UserBadge, error) {
-	ownership, err := s.getOwnershipList()
+	ownership, _, err := s.getOwnershipList()
 	if err != nil {
 		return nil, err
 	}
 
-	badges, err := s.getAllBadges()
+	badges, _, err := s.getAllBadges()
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +374,7 @@ func (s *store) GetUserBadges(userID string) ([]*badgesmodel.UserBadge, error) {
 }
 
 func (s *store) GetType(tID badgesmodel.BadgeType) (*badgesmodel.BadgeTypeDefinition, error) {
-	tt, err := s.getAllTypes()
+	tt, _, err := s.getAllTypes()
 	if err != nil {
 		return nil, err
 	}
@@ -422,74 +392,18 @@ func (s *store) GetBadge(badgeID badgesmodel.BadgeID) (*badgesmodel.Badge, error
 	return s.getBadge(badgeID)
 }
 
-func (s *store) UpdateType(b *badgesmodel.BadgeTypeDefinition) error {
-	bb, err := s.getAllTypes()
-	if err != nil {
-		return err
-	}
-
-	found := false
-	for i, bOld := range bb {
-		if bOld.ID == b.ID {
-			bb[i] = b
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		return errors.New("not found")
-	}
-
-	data, err := json.Marshal(bb)
-	if err != nil {
-		return err
-	}
-
-	appErr := s.api.KVSet(KVKeyTypes, data)
-	if appErr != nil {
-		return appErr
-	}
-
-	return nil
+func (s *store) UpdateType(t *badgesmodel.BadgeTypeDefinition) error {
+	return s.doAtomic(func() (bool, error) { return s.atomicUpdateType(t) })
 }
 
-func (s *store) UpdateBadge(t *badgesmodel.Badge) error {
-	tt, err := s.getAllBadges()
-	if err != nil {
-		return err
-	}
-
-	found := false
-	for i, tOld := range tt {
-		if tOld.ID == t.ID {
-			tt[i] = t
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		return errors.New("not found")
-	}
-
-	data, err := json.Marshal(tt)
-	if err != nil {
-		return err
-	}
-
-	appErr := s.api.KVSet(KVKeyBadges, data)
-	if appErr != nil {
-		return appErr
-	}
-
-	return nil
+func (s *store) UpdateBadge(b *badgesmodel.Badge) error {
+	return s.doAtomic(func() (bool, error) { return s.atomicUpdateBadge(b) })
 }
 
-func (s *store) DeleteType(tID badgesmodel.BadgeType) error {
-	tt, err := s.getAllTypes()
+func (s *store) atomicDeleteType(tID badgesmodel.BadgeType) (bool, error) {
+	tt, data, err := s.getAllTypes()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	for i, t := range tt {
@@ -499,17 +413,13 @@ func (s *store) DeleteType(tID badgesmodel.BadgeType) error {
 		}
 	}
 
-	data, err := json.Marshal(tt)
-	if err != nil {
-		return err
-	}
+	return s.compareAndSet(KVKeyTypes, data, tt)
+}
 
-	appErr := s.api.KVSet(KVKeyTypes, data)
-	if appErr != nil {
-		return appErr
-	}
+func (s *store) DeleteType(tID badgesmodel.BadgeType) error {
+	s.doAtomic(func() (bool, error) { return s.atomicDeleteType(tID) })
 
-	bb, err := s.getAllBadges()
+	bb, _, err := s.getAllBadges()
 	if err != nil {
 		return err
 	}
@@ -526,140 +436,50 @@ func (s *store) DeleteType(tID badgesmodel.BadgeType) error {
 
 	return nil
 }
+
 func (s *store) DeleteBadge(bID badgesmodel.BadgeID) error {
-	bb, err := s.getAllBadges()
+	err := s.doAtomic(func() (bool, error) { return s.atomicRemoveBadge(bID) })
 	if err != nil {
 		return err
 	}
 
-	for i, b := range bb {
-		if b.ID == bID {
-			bb = append(bb[:i], bb[i+1:]...)
-			break
-		}
-	}
-
-	data, err := json.Marshal(bb)
+	err = s.doAtomic(func() (bool, error) { return s.atomicRemoveBadgeFromOwnership(bID) })
 	if err != nil {
 		return err
-	}
-
-	appErr := s.api.KVSet(KVKeyBadges, data)
-	if appErr != nil {
-		return appErr
-	}
-
-	ownership, err := s.getOwnershipList()
-	if err != nil {
-		return err
-	}
-
-	toDelete := []int{}
-	for i, o := range ownership {
-		if o.Badge == bID {
-			toDelete = append([]int{i}, toDelete...)
-		}
-	}
-
-	for _, index := range toDelete {
-		ownership = append(ownership[:index], ownership[index+1:]...)
-	}
-
-	data, err = json.Marshal(ownership)
-	if err != nil {
-		return err
-	}
-
-	appErr = s.api.KVSet(KVKeyOwnership, data)
-	if appErr != nil {
-		return appErr
 	}
 
 	return nil
 }
 
-func (s *store) getAllSubscriptions() ([]badgesmodel.Subscription, error) {
+func (s *store) getAllSubscriptions() ([]badgesmodel.Subscription, []byte, error) {
 	data, appErr := s.api.KVGet(KVKeySubscriptions)
 	if appErr != nil {
-		return nil, appErr
+		return nil, nil, appErr
 	}
 
 	subs := []badgesmodel.Subscription{}
 	if data != nil {
 		err := json.Unmarshal(data, &subs)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return subs, nil
-}
-
-func (s *store) storeSubscriptionList(subs []badgesmodel.Subscription) error {
-	data, err := json.Marshal(subs)
-	if err != nil {
-		return err
-	}
-
-	appErr := s.api.KVSet(KVKeySubscriptions, data)
-	if appErr != nil {
-		return appErr
-	}
-
-	return nil
+	return subs, data, nil
 }
 
 func (s *store) AddSubscription(tID badgesmodel.BadgeType, cID string) error {
-	subs, err := s.getAllSubscriptions()
-	if err != nil {
-		return err
-	}
-
-	for _, sub := range subs {
-		if sub.ChannelID == cID && sub.TypeID == tID {
-			return nil
-		}
-	}
-
-	subs = append(subs, badgesmodel.Subscription{ChannelID: cID, TypeID: tID})
-
-	err = s.storeSubscriptionList(subs)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	toAdd := badgesmodel.Subscription{ChannelID: cID, TypeID: tID}
+	return s.doAtomic(func() (bool, error) { return s.atomicAddSubscription(toAdd) })
 }
 
 func (s *store) RemoveSubscriptions(tID badgesmodel.BadgeType, cID string) error {
-	subs, err := s.getAllSubscriptions()
-	if err != nil {
-		return err
-	}
-
-	found := false
-	for i, sub := range subs {
-		if sub.ChannelID == cID && sub.TypeID == tID {
-			subs = append(subs[:i], subs[i+1:]...)
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		return nil
-	}
-
-	err = s.storeSubscriptionList(subs)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	toRemove := badgesmodel.Subscription{ChannelID: cID, TypeID: tID}
+	return s.doAtomic(func() (bool, error) { return s.atomicRemoveSubscription(toRemove) })
 }
 
 func (s *store) GetTypeSubscriptions(tID badgesmodel.BadgeType) ([]string, error) {
-	subs, err := s.getAllSubscriptions()
+	subs, _, err := s.getAllSubscriptions()
 	if err != nil {
 		return nil, err
 	}
@@ -673,8 +493,9 @@ func (s *store) GetTypeSubscriptions(tID badgesmodel.BadgeType) ([]string, error
 
 	return out, nil
 }
+
 func (s *store) GetChannelSubscriptions(cID string) ([]*badgesmodel.BadgeTypeDefinition, error) {
-	subs, err := s.getAllSubscriptions()
+	subs, _, err := s.getAllSubscriptions()
 	if err != nil {
 		return nil, err
 	}
@@ -709,7 +530,7 @@ func (s *store) getBadgeUsers(badgeID badgesmodel.BadgeID) (badgesmodel.Ownershi
 		return nil, errBadgeNotFound
 	}
 
-	ownership, err := s.getOwnershipList()
+	ownership, _, err := s.getOwnershipList()
 	if err != nil {
 		return nil, err
 	}
