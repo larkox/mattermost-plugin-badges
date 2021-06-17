@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/larkox/mattermost-plugin-badges/badgesmodel"
 	commandparser "github.com/larkox/mattermost-plugin-badges/server/command_parser"
@@ -130,14 +129,14 @@ func (p *Plugin) runCreateBadge(args []string, extra *model.CommandArgs) (bool, 
 		return commandError(err.Error())
 	}
 
-	typeSuggestions, err := p.store.GetTypeSuggestions(u)
+	typeSuggestions, err := p.filterCreateBadgeTypes(u)
 	if err != nil {
 		return commandError(err.Error())
 	}
 
 	typeOptions := []*model.PostActionOptions{}
 	for _, typeSuggestion := range typeSuggestions {
-		id := strconv.Itoa(int(typeSuggestion.ID))
+		id := string(typeSuggestion.ID)
 		typeOptions = append(typeOptions, &model.PostActionOptions{Text: typeSuggestion.Name, Value: id})
 	}
 
@@ -234,28 +233,23 @@ func (p *Plugin) runEditBadge(args []string, extra *model.CommandArgs) (bool, *m
 		return commandError("You must set the badge ID")
 	}
 
-	badgeID, err := strconv.Atoi(badgeIDStr)
+	badge, err := p.store.GetBadge(badgesmodel.BadgeID(badgeIDStr))
 	if err != nil {
 		return commandError(err.Error())
 	}
 
-	badge, err := p.store.GetBadge(badgesmodel.BadgeID(badgeID))
-	if err != nil {
-		return commandError(err.Error())
+	if !canEditBadge(u, p.badgeAdminUserID, badge) {
+		return commandError("you cannot edit this badge")
 	}
 
-	if !canEditBadge(u, badge) {
-		return commandError("you cannot edit this type")
-	}
-
-	typeSuggestions, err := p.store.GetTypeSuggestions(u)
+	typeSuggestions, err := p.filterCreateBadgeTypes(u)
 	if err != nil {
 		return commandError(err.Error())
 	}
 
 	typeOptions := []*model.PostActionOptions{}
 	for _, typeSuggestion := range typeSuggestions {
-		id := strconv.Itoa(int(typeSuggestion.ID))
+		id := string(typeSuggestion.ID)
 		typeOptions = append(typeOptions, &model.PostActionOptions{Text: typeSuggestion.Name, Value: id})
 	}
 
@@ -269,7 +263,7 @@ func (p *Plugin) runEditBadge(args []string, extra *model.CommandArgs) (bool, *m
 		Dialog: model.Dialog{
 			Title:       "Create badge",
 			SubmitLabel: "Edit",
-			State:       strconv.Itoa(int(badge.ID)),
+			State:       string(badge.ID),
 			Elements: []model.DialogElement{
 				{
 					DisplayName: "Name",
@@ -297,7 +291,7 @@ func (p *Plugin) runEditBadge(args []string, extra *model.CommandArgs) (bool, *m
 					Type:        "select",
 					Name:        DialogFieldBadgeType,
 					Options:     typeOptions,
-					Default:     strconv.Itoa(int(badge.Type)),
+					Default:     string(badge.Type),
 				},
 				{
 					DisplayName: "Multiple",
@@ -331,7 +325,7 @@ func (p *Plugin) runEditType(args []string, extra *model.CommandArgs) (bool, *mo
 		return commandError(err.Error())
 	}
 
-	if !canCreateType(u, false) {
+	if !canCreateType(u, p.badgeAdminUserID, false) {
 		return commandError("You have no permissions to edit a badge type.")
 	}
 
@@ -346,17 +340,12 @@ func (p *Plugin) runEditType(args []string, extra *model.CommandArgs) (bool, *mo
 		return commandError("You must provide a type id")
 	}
 
-	typeID, err := strconv.Atoi(badgeTypeStr)
+	typeDefinition, err := p.store.GetType(badgesmodel.BadgeType(badgeTypeStr))
 	if err != nil {
 		return commandError(err.Error())
 	}
 
-	typeDefinition, err := p.store.GetType(badgesmodel.BadgeType(typeID))
-	if err != nil {
-		return commandError(err.Error())
-	}
-
-	if !canEditType(u, typeDefinition) {
+	if !canEditType(u, p.badgeAdminUserID, typeDefinition) {
 		return commandError("you cannot edit this type")
 	}
 
@@ -469,7 +458,7 @@ func (p *Plugin) runCreateType(args []string, extra *model.CommandArgs) (bool, *
 		return commandError(err.Error())
 	}
 
-	if !canCreateType(u, false) {
+	if !canCreateType(u, p.badgeAdminUserID, false) {
 		return commandError("You have no permissions to create a badge type.")
 	}
 
@@ -542,23 +531,37 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 			username = username[1:]
 		}
 
+		granter, err := p.mm.User.Get(extra.UserId)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		badge, err := p.store.GetBadge(badgesmodel.BadgeID(badgeStr))
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		badgeType, err := p.store.GetType(badge.Type)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		if !canGrantBadge(granter, p.badgeAdminUserID, badge, badgeType) {
+			return commandError("you have no permissions to grant this badge")
+		}
+
 		user, err := p.mm.User.GetByUsername(username)
 		if err != nil {
 			return commandError(err.Error())
 		}
 
-		badgeID, err := strconv.Atoi(badgeStr)
-		if err != nil {
-			return commandError(err.Error())
-		}
-
-		shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeID), user.Id, extra.UserId, "")
+		shouldNotify, err := p.store.GrantBadge(badgesmodel.BadgeID(badgeStr), user.Id, extra.UserId, "")
 		if err != nil {
 			return commandError(err.Error())
 		}
 
 		if shouldNotify {
-			p.notifyGrant(badgesmodel.BadgeID(badgeID), extra.UserId, user, false, "", "")
+			p.notifyGrant(badgesmodel.BadgeID(badgeStr), extra.UserId, user, false, "", "")
 		}
 
 		p.postCommandResponse(extra, "Granted")
@@ -598,12 +601,12 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 	}
 
 	options := []*model.PostActionOptions{}
-	grantableBadges, err := p.store.GetGrantSuggestions(actingUser)
+	grantableBadges, err := p.filterGrantBadges(actingUser)
 	if err != nil {
 		return commandError(err.Error())
 	}
 	for _, badge := range grantableBadges {
-		options = append(options, &model.PostActionOptions{Text: badge.Name, Value: strconv.Itoa(int(badge.ID))})
+		options = append(options, &model.PostActionOptions{Text: badge.Name, Value: string(badge.ID)})
 	}
 
 	badgeElement := model.DialogElement{
@@ -614,15 +617,9 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 	}
 
 	if badgeStr != "" {
-		var badgeID int
-		badgeID, err = strconv.Atoi(badgeStr)
-		if err != nil {
-			return commandError(err.Error())
-		}
-
 		found := false
 		for _, badge := range grantableBadges {
-			if badgeID == int(badge.ID) {
+			if badgeStr == string(badge.ID) {
 				found = true
 				break
 			}
@@ -708,18 +705,13 @@ func (p *Plugin) runCreateSubscription(args []string, extra *model.CommandArgs) 
 		return commandError(err.Error())
 	}
 
-	if !canCreateSubscription(actingUser, extra.ChannelId) {
+	if !canCreateSubscription(actingUser, p.badgeAdminUserID, extra.ChannelId) {
 		return commandError("You cannot create subscriptions")
 	}
 
 	if typeStr != "" {
-		var typeID int
-		typeID, err = strconv.Atoi(typeStr)
-		if err != nil {
-			return commandError(err.Error())
-		}
 
-		err = p.store.AddSubscription(badgesmodel.BadgeType(typeID), extra.ChannelId)
+		err = p.store.AddSubscription(badgesmodel.BadgeType(typeStr), extra.ChannelId)
 		if err != nil {
 			return commandError(err.Error())
 		}
@@ -729,12 +721,12 @@ func (p *Plugin) runCreateSubscription(args []string, extra *model.CommandArgs) 
 	}
 
 	options := []*model.PostActionOptions{}
-	typesDefinitions, err := p.store.GetEditTypeSuggestions(actingUser)
+	typesDefinitions, err := p.filterEditTypes(actingUser)
 	if err != nil {
 		return commandError(err.Error())
 	}
 	for _, typeDefinition := range typesDefinitions {
-		options = append(options, &model.PostActionOptions{Text: typeDefinition.Name, Value: strconv.Itoa(int(typeDefinition.ID))})
+		options = append(options, &model.PostActionOptions{Text: typeDefinition.Name, Value: string(typeDefinition.ID)})
 	}
 
 	err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
@@ -775,18 +767,12 @@ func (p *Plugin) runDeleteSubscription(args []string, extra *model.CommandArgs) 
 		return commandError(err.Error())
 	}
 
-	if !canCreateSubscription(actingUser, extra.ChannelId) {
+	if !canCreateSubscription(actingUser, p.badgeAdminUserID, extra.ChannelId) {
 		return commandError("You cannot create subscriptions")
 	}
 
 	if typeStr != "" {
-		var typeID int
-		typeID, err = strconv.Atoi(typeStr)
-		if err != nil {
-			return commandError(err.Error())
-		}
-
-		err = p.store.RemoveSubscriptions(badgesmodel.BadgeType(typeID), extra.ChannelId)
+		err = p.store.RemoveSubscriptions(badgesmodel.BadgeType(typeStr), extra.ChannelId)
 		if err != nil {
 			return commandError(err.Error())
 		}
@@ -801,7 +787,7 @@ func (p *Plugin) runDeleteSubscription(args []string, extra *model.CommandArgs) 
 		return commandError(err.Error())
 	}
 	for _, typeDefinition := range typesDefinitions {
-		options = append(options, &model.PostActionOptions{Text: typeDefinition.Name, Value: strconv.Itoa(int(typeDefinition.ID))})
+		options = append(options, &model.PostActionOptions{Text: typeDefinition.Name, Value: string(typeDefinition.ID)})
 	}
 
 	err = p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{

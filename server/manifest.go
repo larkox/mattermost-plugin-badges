@@ -19,7 +19,7 @@ const manifestStr = `
   "support_url": "https://github.com/larkox/mattermost-plugin-badges/issues",
   "release_notes_url": "https://github.com/larkox/mattermost-plugin-badges/releases/tag/v0.1.0",
   "icon_path": "assets/starter-template-icon.svg",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "min_server_version": "5.12.0",
   "server": {
     "executables": {
@@ -35,7 +35,16 @@ const manifestStr = `
   "settings_schema": {
     "header": "",
     "footer": "",
-    "settings": []
+    "settings": [
+      {
+        "key": "BadgesAdmin",
+        "display_name": "Badges admin:",
+        "type": "text",
+        "help_text": "This user will be considered as an admin for the badges plugin. They can create types, and modify and grant any badge.",
+        "placeholder": "",
+        "default": null
+      }
+    ]
   }
 }
 `

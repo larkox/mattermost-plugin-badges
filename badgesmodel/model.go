@@ -4,8 +4,8 @@ import (
 	"time"
 )
 
-type BadgeType int
-type BadgeID int
+type BadgeType string
+type BadgeID string
 
 type Ownership struct {
 	User      string    `json:"user"`
