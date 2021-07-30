@@ -4,7 +4,7 @@ import {BadgeID, AllBadgesBadge} from '../../types/badges';
 import Client from '../../client/api';
 
 import {RHSState} from '../../types/general';
-import {RHS_STATE_DETAIL} from '../../constants';
+import {IMAGE_TYPE_EMOJI, RHS_STATE_DETAIL} from '../../constants';
 
 import AllBadgesRow from './all_badges_row';
 import RHSScrollbars from './rhs_scrollbars';
@@ -15,6 +15,7 @@ type Props = {
     actions: {
         setRHSView: (view: RHSState) => void;
         setRHSBadge: (badge: BadgeID | null) => void;
+        getCustomEmojisByName: (names: string[]) => void;
     };
 }
 
@@ -37,6 +38,18 @@ class AllBadges extends React.PureComponent<Props, State> {
         c.getAllBadges().then((badges) => {
             this.setState({badges, loading: false});
         });
+    }
+
+    componentDidUpdate(prevProps: Props, prevState: State) {
+        if (this.state.badges !== prevState.badges) {
+            const names: string[] = [];
+            this.state.badges?.forEach((badge) => {
+                if (badge.image_type === IMAGE_TYPE_EMOJI) {
+                    names.push(badge.image);
+                }
+            });
+            this.props.actions.getCustomEmojisByName(names);
+        }
     }
 
     onBadgeClick = (badge: AllBadgesBadge) => {

@@ -222,7 +222,7 @@ func (p *Plugin) dialogCreateType(w http.ResponseWriter, r *http.Request, userID
 	}
 
 	if grantAllowList != "" {
-		toCreate.CanCreate.AllowList = map[string]bool{}
+		toCreate.CanGrant.AllowList = map[string]bool{}
 		usernames := strings.Split(createAllowList, ",")
 		for _, username := range usernames {
 			username = strings.TrimSpace(username)
@@ -339,40 +339,36 @@ func (p *Plugin) dialogEditType(w http.ResponseWriter, r *http.Request, userID s
 	createAllowList, _ := req.Submission[DialogFieldTypeAllowlistCanCreate].(string)
 	grantAllowList, _ := req.Submission[DialogFieldTypeAllowlistCanGrant].(string)
 
-	if createAllowList != "" {
-		originalType.CanCreate.AllowList = map[string]bool{}
-		usernames := strings.Split(createAllowList, ",")
-		for _, username := range usernames {
-			username = strings.TrimSpace(username)
-			if username == "" {
-				continue
-			}
-			var allowedUser *model.User
-			allowedUser, err = p.mm.User.GetByUsername(username)
-			if err != nil {
-				dialogError(w, "Cannot find user", map[string]string{DialogFieldTypeAllowlistCanCreate: fmt.Sprintf("Error getting user %s. Error: %v", username, err)})
-				return
-			}
-			originalType.CanCreate.AllowList[allowedUser.Id] = true
+	originalType.CanCreate.AllowList = map[string]bool{}
+	usernames := strings.Split(createAllowList, ",")
+	for _, username := range usernames {
+		username = strings.TrimSpace(username)
+		if username == "" {
+			continue
 		}
+		var allowedUser *model.User
+		allowedUser, err = p.mm.User.GetByUsername(username)
+		if err != nil {
+			dialogError(w, "Cannot find user", map[string]string{DialogFieldTypeAllowlistCanCreate: fmt.Sprintf("Error getting user %s. Error: %v", username, err)})
+			return
+		}
+		originalType.CanCreate.AllowList[allowedUser.Id] = true
 	}
 
-	if grantAllowList != "" {
-		originalType.CanGrant.AllowList = map[string]bool{}
-		usernames := strings.Split(createAllowList, ",")
-		for _, username := range usernames {
-			username = strings.TrimSpace(username)
-			if username == "" {
-				continue
-			}
-			var allowedUser *model.User
-			allowedUser, err = p.mm.User.GetByUsername(username)
-			if err != nil {
-				dialogError(w, "Cannot find user", map[string]string{DialogFieldTypeAllowlistCanGrant: fmt.Sprintf("Error getting user %s. Error: %v", username, err)})
-				return
-			}
-			originalType.CanGrant.AllowList[allowedUser.Id] = true
+	originalType.CanGrant.AllowList = map[string]bool{}
+	usernames = strings.Split(grantAllowList, ",")
+	for _, username := range usernames {
+		username = strings.TrimSpace(username)
+		if username == "" {
+			continue
 		}
+		var allowedUser *model.User
+		allowedUser, err = p.mm.User.GetByUsername(username)
+		if err != nil {
+			dialogError(w, "Cannot find user", map[string]string{DialogFieldTypeAllowlistCanGrant: fmt.Sprintf("Error getting user %s. Error: %v", username, err)})
+			return
+		}
+		originalType.CanGrant.AllowList[allowedUser.Id] = true
 	}
 
 	err = p.store.UpdateType(originalType)

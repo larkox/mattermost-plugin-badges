@@ -1,7 +1,7 @@
 // Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
 // See LICENSE.txt for license information.
 
-import {CustomEmoji, SystemEmoji} from 'mattermost-redux/types/emojis';
+import {CustomEmoji} from 'mattermost-redux/types/emojis';
 
 import * as Emoji from './emoji';
 
@@ -52,15 +52,15 @@ export default class EmojiMap {
 
                     this.systemIndex += 1;
 
-                    return {value: [(emoji as SystemEmoji).aliases[0], emoji]};
+                    return {value: [(emoji as any).short_names[0], emoji]};
                 }
 
                 if (this.customIndex < customEmojisArray.length) {
-                    const emoji = customEmojisArray[this.customIndex][1];
+                    const emoji = customEmojisArray[this.customIndex][1] as any;
 
                     this.customIndex += 1;
-
-                    return {value: [emoji.name, emoji]};
+                    const name = emoji.short_name || emoji.name;
+                    return {value: [name, emoji]};
                 }
 
                 return {done: true};

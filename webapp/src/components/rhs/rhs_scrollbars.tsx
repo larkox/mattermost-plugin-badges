@@ -35,6 +35,7 @@ const RHSScrollbars = ({children}: {children: React.ReactNode[]}) => {
             renderThumbHorizontal={renderThumbHorizontal}
             renderThumbVertical={renderThumbVertical}
             renderView={renderView}
+            style={{flex: '1 1 auto', height: ''}}
         >
             {children}
         </Scrollbars>

@@ -11,6 +11,8 @@ import {getUser} from 'mattermost-redux/selectors/entities/users';
 
 import {GlobalState} from 'mattermost-redux/types/store';
 
+import {getCustomEmojiByName, getCustomEmojisByName} from 'mattermost-redux/actions/emojis';
+
 import {getRHSBadge, getRHSUser, getRHSView} from 'selectors';
 import {RHS_STATE_ALL, RHS_STATE_DETAIL, RHS_STATE_OTHER, RHS_STATE_MY} from '../../constants';
 import {RHSState} from 'types/general';
@@ -36,6 +38,7 @@ const RHS: React.FC = () => {
                 actions={{
                     setRHSView: (view: RHSState) => dispatch(setRHSView(view)),
                     setRHSBadge: (badge: BadgeID | null) => dispatch(setRHSBadge(badge)),
+                    getCustomEmojisByName: (names: string[]) => dispatch(getCustomEmojisByName(names)),
                 }}
             />
         );
@@ -47,6 +50,7 @@ const RHS: React.FC = () => {
                 actions={{
                     setRHSView: (view: RHSState) => dispatch(setRHSView(view)),
                     setRHSUser: (user: string | null) => dispatch(setRHSUser(user)),
+                    getCustomEmojiByName: (names: string) => dispatch(getCustomEmojiByName(names)),
                 }}
             />
         );
@@ -58,6 +62,7 @@ const RHS: React.FC = () => {
                 actions={{
                     setRHSView: (view: RHSState) => dispatch(setRHSView(view)),
                     setRHSBadge: (badge: BadgeID | null) => dispatch(setRHSBadge(badge)),
+                    getCustomEmojisByName: (names: string[]) => dispatch(getCustomEmojisByName(names)),
                 }}
             />
         );
@@ -70,6 +75,7 @@ const RHS: React.FC = () => {
                 actions={{
                     setRHSView: (view: RHSState) => dispatch(setRHSView(view)),
                     setRHSBadge: (badge: BadgeID | null) => dispatch(setRHSBadge(badge)),
+                    getCustomEmojisByName: (names: string[]) => dispatch(getCustomEmojisByName(names)),
                 }}
             />
         );

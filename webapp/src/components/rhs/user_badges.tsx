@@ -5,7 +5,7 @@ import {BadgeID, UserBadge} from '../../types/badges';
 import Client from '../../client/api';
 
 import {RHSState} from 'types/general';
-import {RHS_STATE_DETAIL} from '../../constants';
+import {IMAGE_TYPE_EMOJI, RHS_STATE_DETAIL} from '../../constants';
 
 import UserBadgeRow from './user_badge_row';
 import RHSScrollbars from './rhs_scrollbars';
@@ -18,6 +18,7 @@ type Props = {
     actions: {
         setRHSView: (view: RHSState) => void;
         setRHSBadge: (badge: BadgeID | null) => void;
+        getCustomEmojisByName: (names: string[]) => void;
     };
 }
 
@@ -45,8 +46,17 @@ class UserBadges extends React.PureComponent<Props, State> {
         });
     }
 
-    componentDidUpdate(prevProps: Props) {
-        if (this.props.user === prevProps.user) {
+    componentDidUpdate(prevProps: Props, prevState: State) {
+        if (this.state.badges !== prevState.badges) {
+            const names: string[] = [];
+            this.state.badges?.forEach((badge) => {
+                if (badge.image_type === IMAGE_TYPE_EMOJI) {
+                    names.push(badge.image);
+                }
+            });
+            this.props.actions.getCustomEmojisByName(names);
+        }
+        if (this.props.user?.id === prevProps.user?.id) {
             return;
         }
 

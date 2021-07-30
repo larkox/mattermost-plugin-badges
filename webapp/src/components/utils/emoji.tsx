@@ -3,10 +3,10 @@
 import React from 'react';
 import {useSelector} from 'react-redux';
 
-import {getEmojiImageUrl} from 'mattermost-redux/utils/emoji_utils';
 import {GlobalState} from 'mattermost-redux/types/store';
 
 import {getEmojiMap} from 'selectors';
+import {getEmojiImageUrl} from 'utils/emoji';
 
 interface ComponentProps {
     emojiName: string;

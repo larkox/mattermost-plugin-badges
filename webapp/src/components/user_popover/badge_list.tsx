@@ -9,7 +9,7 @@ import {BadgeID, UserBadge} from 'types/badges';
 import Client from 'client/api';
 import BadgeImage from '../utils/badge_image';
 import {RHSState} from 'types/general';
-import {RHS_STATE_DETAIL, RHS_STATE_MY, RHS_STATE_OTHER} from '../../constants';
+import {IMAGE_TYPE_EMOJI, RHS_STATE_DETAIL, RHS_STATE_MY, RHS_STATE_OTHER} from '../../constants';
 import {markdown} from 'utils/markdown';
 
 type Props = {
@@ -24,11 +24,13 @@ type Props = {
         setRHSBadge: (id: BadgeID | null) => Promise<void>;
         setRHSUser: (id: string | null) => Promise<void>;
         openGrant: (user?: string, badge?: string) => Promise<void>;
+        getCustomEmojisByName: (names: string[]) => Promise<unknown>;
     };
 }
 
 type State = {
     badges?: UserBadge[];
+    loaded?: Boolean;
 }
 
 const MAX_BADGES = 20;
@@ -44,8 +46,23 @@ class BadgeList extends React.PureComponent<Props, State> {
     componentDidMount() {
         const c = new Client();
         c.getUserBadges(this.props.user.id).then((badges) => {
-            this.setState({badges});
+            this.setState({badges, loaded: true});
         });
+    }
+
+    componentDidUpdate(prevProps: Props, prevState: State) {
+        if (this.state.badges !== prevState.badges) {
+            const nBadges = this.state.badges?.length || 0;
+            const toShow = nBadges < MAX_BADGES ? nBadges : MAX_BADGES;
+            const names: string[] = [];
+            for (let i = 0; i < toShow; i++) {
+                const badge = this.state.badges![i];
+                if (badge.image_type === IMAGE_TYPE_EMOJI) {
+                    names.push(badge.image);
+                }
+            }
+            this.props.actions.getCustomEmojisByName(names);
+        }
     }
 
     onMoreClick = () => {
@@ -130,11 +147,20 @@ class BadgeList extends React.PureComponent<Props, State> {
                 </a>
             );
         }
+        let loading: React.ReactNode = null;
+        if (!this.state.loaded) {
+            loading = (
+
+                // Reserve enough height for two rows of badges and the "and more" link
+                <div style={{height: 64}}>{'Loading...'}</div>
+            );
+        }
         return (
             <div>
                 <div><b>{'Badges'}</b></div>
                 {content}
                 {andMore}
+                {loading}
                 <a onClick={this.onGrantClick}>
                     <div>{'Grant badge'}</div>
                 </a>

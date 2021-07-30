@@ -20,6 +20,7 @@ type Props = {
     actions: {
         setRHSView: (view: RHSState) => void;
         setRHSUser: (user: string | null) => void;
+        getCustomEmojiByName: (names: string) => void;
     };
 }
 
@@ -48,8 +49,11 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
         });
     }
 
-    componentDidUpdate(prevProps: Props) {
-        // Typical usage (don't forget to compare props):
+    componentDidUpdate(prevProps: Props, prevState: State) {
+        if (this.state.badge !== prevState.badge && this.state.badge) {
+            this.props.actions.getCustomEmojiByName(this.state.badge!.name);
+        }
+
         if (this.props.badgeID === prevProps.badgeID) {
             return;
         }
