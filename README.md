@@ -8,7 +8,7 @@ Get the latest release from [GitHub](https://github.com/larkox/mattermost-plugin
 
 ![Screenshot from 2022-03-16 11-02-13](https://user-images.githubusercontent.com/1933730/158565396-9d637c4c-6772-449f-81cb-2b73f8f6670e.png)
 
-- Badges admin: Every sysadmin is considered a badges admin. Apart of that, you can assign this role to one person by adding their username here. Only one person is permitted.
+- Badges admin: Every System Admin is considered a badges admin. System Admins can assign the badges admin role to a single person by specifying their username. Only a single badge admin assignment is permitted.
 
 ## Usage
 ### Creating a type
