@@ -50,7 +50,7 @@ Run the slash command `/badges create badge` to open the creation dialog.
 - Multiple: Whether this badge can be granted more than once to the same person.
 
 ### Details about Multiple
-All badges can be assigned to any number of persons. What the Multiple setting controls is whether this badge can be granted more than once to the same person. For example, a "Thank you" badge should be granteable many times (many people can be thankful to you in more than one ocassion). This badge should have the Multiple checkbox marked. But a "First year in the company" badge should be granted just once (it makes no sense to have 2 first year in the company). That badge should have the Multiple checkbox unmarked.
+All badges can be assigned to any number of people. What the **Multiple** setting controls is whether this badge can be granted more than once to the same person. For example, a "Thank you" badge should be grantable many times (many people can be thankful to you on more than one occasion), and therefore, a Thank You badge should have the **Multiple** option selected. However, a "First year in the company" badge should be granted only once since a user won't celebrate this milestone multiple times at the same company. This type of badge should have the **Multiple** option unselected.
 
 ### Granting a badge
 In order to grant a badge, you must have permissions to grant it.
