@@ -12,7 +12,7 @@ Get the latest release from [GitHub](https://github.com/larkox/mattermost-plugin
 
 ## Usage
 ### Creating a type
-In order to create a type, you must be a badges admin. Types are used to organize badges and assign permissions.
+Badge admins can create different types of badges, and each type of badge can have its own permissions. You must be a badge admin to create a badge type.
 Run the slash command `/badges create type` to open the creation dialog.
 
 ![Screenshot from 2022-03-16 11-14-31](https://user-images.githubusercontent.com/1933730/158567578-1241cc93-6964-4dc7-a56b-a5b3729229b7.png)
