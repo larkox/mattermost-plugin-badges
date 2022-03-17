@@ -24,7 +24,7 @@ Run the slash command `/badges create type` to open the creation dialog.
 - Can grant allowlist: this list contains the usernames (comma separated) of all the people allowed to grant badges of this type.
 
 ### Permissions details
-Badge admins can always create types, create badges for any type, and grant badges from any type, no matter the permissions in place.
+Badge admins can always create types, create badges for any type, and grant badges from any type, regardless of the permissions in place for a given badge type.
 Badge creator can always grant the badge they created.
 Any other user is subject to the permissions defined in the type.
 
