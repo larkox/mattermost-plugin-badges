@@ -17,7 +17,7 @@ Run the slash command `/badges create type` to open the creation dialog.
 
 ![Screenshot from 2022-03-16 11-14-31](https://user-images.githubusercontent.com/1933730/158567578-1241cc93-6964-4dc7-a56b-a5b3729229b7.png)
 
-- Name: The name of the type. Will be shown in the badges description.
+- Name: The type of badge that's visible in the badges description.
 - Everyone can create badge: If you mark this checkbox, every user in your Mattermost instance can create badges of this type.
 - Can create allowlist: This list contains the usernames (comma separated) of all the people allowed to create badges of this type.
 - Everyone can grant badge: If you mark this checkbox, every user in your Mattermost instance can grant any badge of this type.
