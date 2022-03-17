@@ -65,7 +65,7 @@ The dialog looks like this:
 - User: The user you want to grant the badge to (may be prepopulated if you clicked the grant button from the profile popover, or added the username in the command).
 - Badge: The badge you want to grant (may be prepopulated if you added the badge id in the command).
 - Reason: An optional reason why you are awarding this badge. (Specially useful for badges like "Thank you").
-- Notify on this channel: If you mark this, a message from the badges bot will be posted in the current channel, letting all know that you granted this badge to that person.
+- Notify on this channel: If you select this option, a message from the badges bot will be posted in the current channel, letting everyone in that channel know that you granted this badge to that person.
 When a badge is granted, three things may happen:
 - The user that received the badge will always receive a DM from the badges bot letting them know they have been awarded a badge.
 - If "Notify on this channel" was marked, the badges bot will post a message on the current channel letting everyone know that the user has been awarded a badge.
