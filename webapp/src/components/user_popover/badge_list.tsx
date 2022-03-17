@@ -5,6 +5,8 @@ import {Tooltip, OverlayTrigger} from 'react-bootstrap';
 
 import {GlobalState} from 'mattermost-redux/types/store';
 
+import {systemEmojis} from 'mattermost-redux/actions/emojis';
+
 import {BadgeID, UserBadge} from 'types/badges';
 import Client from 'client/api';
 import BadgeImage from '../utils/badge_image';
@@ -61,7 +63,8 @@ class BadgeList extends React.PureComponent<Props, State> {
                     names.push(badge.image);
                 }
             }
-            this.props.actions.getCustomEmojisByName(names);
+            const toLoad = names.filter((v) => !systemEmojis.has(v));
+            this.props.actions.getCustomEmojisByName(toLoad);
         }
     }
 

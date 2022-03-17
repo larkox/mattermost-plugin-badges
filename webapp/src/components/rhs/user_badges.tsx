@@ -1,5 +1,7 @@
-import {UserProfile} from 'mattermost-redux/types/users';
 import React from 'react';
+
+import {UserProfile} from 'mattermost-redux/types/users';
+import {systemEmojis} from 'mattermost-redux/actions/emojis';
 
 import {BadgeID, UserBadge} from '../../types/badges';
 import Client from '../../client/api';
@@ -54,7 +56,8 @@ class UserBadges extends React.PureComponent<Props, State> {
                     names.push(badge.image);
                 }
             });
-            this.props.actions.getCustomEmojisByName(names);
+            const toLoad = names.filter((v) => !systemEmojis.has(v));
+            this.props.actions.getCustomEmojisByName(toLoad);
         }
         if (this.props.user?.id === prevProps.user?.id) {
             return;

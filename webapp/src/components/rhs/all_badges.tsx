@@ -1,5 +1,7 @@
 import React from 'react';
 
+import {systemEmojis} from 'mattermost-redux/actions/emojis';
+
 import {BadgeID, AllBadgesBadge} from '../../types/badges';
 import Client from '../../client/api';
 
@@ -48,7 +50,8 @@ class AllBadges extends React.PureComponent<Props, State> {
                     names.push(badge.image);
                 }
             });
-            this.props.actions.getCustomEmojisByName(names);
+            const toLoad = names.filter((v) => !systemEmojis.has(v));
+            this.props.actions.getCustomEmojisByName(toLoad);
         }
     }
 

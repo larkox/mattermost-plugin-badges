@@ -1,5 +1,7 @@
 import React from 'react';
 
+import {systemEmojis} from 'mattermost-redux/actions/emojis';
+
 import {BadgeDetails, BadgeID} from '../../types/badges';
 import Client from '../../client/api';
 
@@ -50,8 +52,8 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
     }
 
     componentDidUpdate(prevProps: Props, prevState: State) {
-        if (this.state.badge !== prevState.badge && this.state.badge) {
-            this.props.actions.getCustomEmojiByName(this.state.badge!.name);
+        if (this.state.badge !== prevState.badge && this.state.badge && !systemEmojis.has(this.state.badge.name)) {
+            this.props.actions.getCustomEmojiByName(this.state.badge.name);
         }
 
         if (this.props.badgeID === prevProps.badgeID) {
