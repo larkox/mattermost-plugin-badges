@@ -46,7 +46,7 @@ Run the slash command `/badges create badge` to open the creation dialog.
 - Name: Name of the badge.
 - Description: Description of the badge.
 - Image: Only emojis are allowed. You must input the emoji name as you would do to add it to a message (e.g. `:+1:` or `:smile:`). Custom emojis are also allowed.
-- Type: The type of the badge. This list will show only types you have permissions to create.
+- Type: The type of badge. This list will show only types you have permissions to create.
 - Multiple: Whether this badge can be granted more than once to the same person.
 
 ### Details about Multiple
