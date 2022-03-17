@@ -28,7 +28,7 @@ Badge admins can always create types, create badges for any type, and grant badg
 A badge creator can always grant the badge they created.
 Any other user is subject to the permissions defined as part of the badge type.
 
-Here are some examples of what can be done with permissions. Keep in mind that even if the examples uses absolutes ("only"), the previous rules about badge admins and badge creators always apply. So when we say "only user1 can create badges" you can read "only user1 and badge admins can create badges". And when we say "only user1 can grant badges" you can read "only user1, badge admins, and the badge creator can grant badges".
+Some examples of badge permissions by type are included below. Remember that badge admins have full control over badges, and badge creators can always grant badges. The examples below are intended to demonstrate how badge permissions can be configured for non-admin users to get the most out of badges. 
 (ECC: Everyone Can Create, CC: Can Create Allowlist, ECG: Everyone Can Grant, CG: Can Grant Allowlist)
 - Only badge admins can create and grant badges: ECC false, ECG false, CC empty and CG empty.
 - Only user1 can create badges, but everyone can grant them (for example for peer appreciation badges, like "Thank you" badge): ECC false, ECG true, CC user1, CG empty
