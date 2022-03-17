@@ -4,6 +4,8 @@ import {GlobalState} from 'mattermost-redux/types/store';
 
 import {GenericAction} from 'mattermost-redux/types/actions';
 
+import {getConfig} from 'mattermost-redux/selectors/entities/general';
+
 import React from 'react';
 
 import {openAddSubscription, openCreateBadge, openCreateType, openRemoveSubscription, setRHSView, setShowRHSAction} from 'actions/actions';
@@ -30,15 +32,27 @@ export default class Plugin {
         const {showRHSPlugin, toggleRHSPlugin} = registry.registerRightHandSidebarComponent(UserBadges, 'Badges');
         store.dispatch(setShowRHSAction(() => store.dispatch(showRHSPlugin)));
 
+        const toggleRHS = () => {
+            store.dispatch(setRHSView(RHS_STATE_ALL));
+            store.dispatch(toggleRHSPlugin);
+        }
+
         registry.registerChannelHeaderButtonAction(
             <ChannelHeaderButton/>,
-            () => {
-                store.dispatch(setRHSView(RHS_STATE_ALL));
-                store.dispatch(toggleRHSPlugin);
-            },
+            toggleRHS,
             'Badges',
             'Open the list of all badges.',
         );
+
+        if (registry.registerAppBarComponent) {
+            const siteUrl = getConfig(store.getState())?.SiteURL || '';
+            const iconURL = `${siteUrl}/plugins/${manifest.id}/public/app-bar-icon.png`;
+            registry.registerAppBarComponent(
+                iconURL,
+                toggleRHS,
+                'Open the list of all badges.',
+            );
+        }
 
         registry.registerMainMenuAction(
             'Create badge',
