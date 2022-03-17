@@ -1,5 +1,5 @@
 # Badges plugin
-Let your users show appreciation by granting badges.
+Let your users show appreciation for their fellow colleagues by granting badges.
 
 ## Install
 Get the latest release from [GitHub](https://github.com/larkox/mattermost-plugin-badges/releases) and [install it manually](https://developers.mattermost.com/integrate/plugins/server/hello-world/#installing-the-plugin) on your server.
