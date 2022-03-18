@@ -189,11 +189,15 @@ func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, grante
 			}
 		}
 		if inChannel {
-			post := basePost.Clone()
-			post.ChannelId = channelID
-			err := p.mm.Post.CreatePost(post)
-			if err != nil {
-				p.mm.Log.Debug("notify here error", "err", err)
+			if !p.API.HasPermissionToChannel(granter, channelID, model.PERMISSION_CREATE_POST) {
+				p.mm.Post.SendEphemeralPost(granter, &model.Post{Message: "You don't have permissions to notify the grant on this channel.", ChannelId: channelID})
+			} else {
+				post := basePost.Clone()
+				post.ChannelId = channelID
+				err := p.mm.Post.CreatePost(post)
+				if err != nil {
+					p.mm.Log.Debug("notify here error", "err", err)
+				}
 			}
 		}
 	}
