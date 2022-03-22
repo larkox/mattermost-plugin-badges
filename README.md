@@ -91,7 +91,7 @@ The dialog looks like this:
 
 - **Type**: The type of badges you want to subscribe to this channel.
 
-In order to remove subscriptions, a similar dialog can be opened by using the `/badges subscription remove` and the "Remove badge subscription" menu from the channel menu.
+In order to remove subscriptions, a similar dialog can be opened by using the `/badges subscription remove` and the **Remove badge subscription** option from the channel menu.
 
 ### Editing a deleting badges and types
 In order to edit or delete types you must be a badge admin. In order to edit or delete a badge, you must be a badge admin or the creator.
