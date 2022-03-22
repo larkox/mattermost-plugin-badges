@@ -21,7 +21,7 @@ Run the slash command `/badges create type` to open the creation dialog.
 - **Everyone can create badge**: If you mark this checkbox, every user in your Mattermost instance can create badges of this type.
 - **Can create allowlist**: This list contains the usernames (comma separated) of all the people allowed to create badges of this type.
 - **Everyone can grant badge**: If you mark this checkbox, every user in your Mattermost instance can grant any badge of this type.
-- **Can grant allowlist**: this list contains the usernames (comma separated) of all the people allowed to grant badges of this type.
+- **Can grant allowlist**: This list contains the usernames (comma separated) of all the people allowed to grant badges of this type.
 
 ### Permissions details
 Badge admins can always create types, create badges for any type, and grant badges from any type, regardless of the permissions in place for a given badge type.
