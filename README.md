@@ -74,7 +74,7 @@ The user that received the badge will always receive a DM from the badges bot le
 
 ![Screenshot from 2022-03-16 12-28-45](https://user-images.githubusercontent.com/1933730/158580318-592bb139-6c43-48f0-99c3-79d868aa8024.png)
 
-If you try to award a badge that can't be awarded more than once to a single recipient, the badge won't be granted..
+If you try to award a badge that can't be awarded more than once to a single recipient, the badge won't be granted.
 
 ### Subscriptions
 In order to create a subscription, you must be a badges admin.
