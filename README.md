@@ -56,7 +56,7 @@ All badges can be assigned to any number of people. What the **Multiple** settin
 ### Granting a badge
 There are two ways to open the grant dialog:
 - Run the `/badges grant` command.
-- Click on the "Grant badge" link available in the Profile Popover, visible when you click on someone's username.
+- Click on the **Grant badge** link available in the Profile Popover, visible when you click on someone's username.
 
 ![Screenshot from 2022-03-16 11-47-14](https://user-images.githubusercontent.com/1933730/158573673-723e77a2-6d58-4aa5-8a89-6adcbce50e13.png)
 
