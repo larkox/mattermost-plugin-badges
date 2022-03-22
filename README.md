@@ -100,7 +100,7 @@ Run `/badges edit type --type typeID` or `/badges edit badge --id badgeID` to op
 ![Screenshot from 2022-03-16 12-22-49](https://user-images.githubusercontent.com/1933730/158579272-7a7164da-0b90-412f-94f5-7a10fe5f1a1a.png)
 ![Screenshot from 2022-03-16 12-21-21](https://user-images.githubusercontent.com/1933730/158579256-58b3ad7b-f0c2-44f9-9d33-4679a87cd034.png)
 
-The only difference to the creation is one extra checkbox to remove the current type or badge. If you mark this checkbox and click edit, the badge or type will be removed.
+The only difference to the creation is one extra checkbox to remove the current type or badge. If you mark this checkbox and click **Edit**, the badge or type will be removed.
 When you remove a badge, the badge is deleted permanently, along with any information about who that badge was granted to. When you remove a type, the type and all the associated badges are removed completely.
 
 ### Badge list
