@@ -1,0 +1,28 @@
+.UserBadgesRow {
+    display: flex;
+    border: 1px solid rgba(var(--center-channel-color-rgb), 0.16);
+    border-radius: 4px;
+    align-items: center;
+    padding: 5px;
+    margin-bottom: 3px;
+    .user-badge-icon {
+        padding: 10px;
+    }
+    .user-badge-name {
+        font-weight: 600;
+    }
+    .user-badge-granted-by {
+        font-size: 10px;
+    }
+    .user-badge-granted-at {
+        font-size: 10px;
+    }
+    .user-badge-descrition {
+        p {
+            margin: 0px
+        }
+    }
+    .user-badge-type {
+        font-size: 10px;
+    }
+}

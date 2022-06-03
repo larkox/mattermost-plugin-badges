@@ -1,0 +1,13 @@
+.UserRow {
+    border: 1px solid rgba(var(--center-channel-color-rgb), 0.16);
+    border-radius: 4px;
+    align-items: center;
+    padding: 5px;
+    margin-bottom: 3px;
+    .badge-user-username {
+        font-weight: 600;
+    }
+    .badge-user-granted-at {
+        font-size: 10px;
+    }
+}

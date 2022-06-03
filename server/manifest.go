@@ -12,10 +12,14 @@ var manifest *model.Manifest
 
 const manifestStr = `
 {
-  "id": "com.mattermost.plugin-starter-template",
-  "name": "Plugin Starter Template",
-  "description": "This plugin serves as a starting point for writing a Mattermost plugin.",
-  "version": "0.1.0",
+  "id": "com.mattermost.badges",
+  "name": "Badges for Mattermost",
+  "description": "This plugin add badges support to Mattermost.",
+  "homepage_url": "https://github.com/larkox/mattermost-plugin-badges",
+  "support_url": "https://github.com/larkox/mattermost-plugin-badges/issues",
+  "release_notes_url": "https://github.com/larkox/mattermost-plugin-badges/releases/tag/v0.1.2",
+  "icon_path": "assets/starter-template-icon.svg",
+  "version": "0.1.3",
   "min_server_version": "5.12.0",
   "server": {
     "executables": {
@@ -31,7 +35,16 @@ const manifestStr = `
   "settings_schema": {
     "header": "",
     "footer": "",
-    "settings": []
+    "settings": [
+      {
+        "key": "BadgesAdmin",
+        "display_name": "Badges admin:",
+        "type": "text",
+        "help_text": "This user will be considered as an admin for the badges plugin. They can create types, and modify and grant any badge.",
+        "placeholder": "",
+        "default": null
+      }
+    ]
   }
 }
 `
