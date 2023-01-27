@@ -1,4 +1,4 @@
-#badgeList {
+#badgePlugin {
   #contentContainer {
     display: flex;
     align-content: flex-end;
@@ -18,7 +18,24 @@
     padding: 0;
 
     &:hover {
-      background-color: rgba(63, 67, 80, 0.08);
+      background: rgba(63, 67, 80, 0.08);
+      color: rgba(63, 67, 80, 0.72);
+    }
+  }
+
+  #grantBadgeButton {
+    margin-top: 4px;
+    padding-left: 0;
+    border: 0;
+    background-color: rgb(255, 255, 255);
+    color: rgb(28, 88, 217);
+    font-size: 12px;
+    font-weight: 600;
+    gap: 6px;
+    line-height: 10px;
+
+    .fa-plus-circle {
+      margin-right: 4px;
     }
   }
 }

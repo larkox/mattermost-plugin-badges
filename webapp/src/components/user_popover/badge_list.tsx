@@ -34,7 +34,7 @@ type Props = {
 
 type State = {
     badges?: UserBadge[];
-    loaded?: Boolean;
+    loaded?: boolean;
 }
 
 const MAX_BADGES = 7;
@@ -171,16 +171,21 @@ class BadgeList extends React.PureComponent<Props, State> {
             );
         }
         return (
-            <div id='badgeList'>
+            <div id='badgePlugin'>
                 <div><b>{'Badges'}</b></div>
                 <div id='contentContainer' >
                     {content}
                     {andMore}
                 </div>
                 {loading}
-                <a onClick={this.onGrantClick}>
-                    <div>{'Grant badge'}</div>
-                </a>
+                <button
+                    id='grantBadgeButton'
+                    onClick={this.onGrantClick}
+                >
+                    <span className={'fa fa-plus-circle'}/>
+                    {'Grant badge'}
+                </button>
+                <hr className='divider divider--expanded'/>
             </div>
         );
     }
