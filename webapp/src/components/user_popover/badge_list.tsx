@@ -108,14 +108,8 @@ class BadgeList extends React.PureComponent<Props, State> {
         const toShow = nBadges < MAX_BADGES ? nBadges : MAX_BADGES;
 
         const content: React.ReactNode[] = [];
-        let row: React.ReactNode[] = [];
         for (let i = 0; i < toShow; i++) {
             const badge = this.state.badges![i];
-            if (i !== 0) {
-                content.push((<div>{row}</div>));
-                row = [];
-            }
-
             const time = new Date(badge.time);
             let reason = null;
             if (badge.reason) {
@@ -123,7 +117,7 @@ class BadgeList extends React.PureComponent<Props, State> {
             }
             const badgeComponent = (
                 <OverlayTrigger
-                    overlay={<Tooltip>
+                    overlay={<Tooltip id='badgeTooltip'>
                         <div>{badge.name}</div>
                         <div>{markdown(badge.description)}</div>
                         {reason}
@@ -141,14 +135,15 @@ class BadgeList extends React.PureComponent<Props, State> {
                     </span>
                 </OverlayTrigger>
             );
-            row.push(badgeComponent);
+            content.push(badgeComponent);
         }
-        content.push((<div>{row}</div>));
         let andMore: React.ReactNode = null;
         if (nBadges > MAX_BADGES) {
             andMore = (
                 <OverlayTrigger
-                    overlay={<Tooltip>{`and ${nBadges - MAX_BADGES} more. Click to see all.`}</Tooltip>}
+                    overlay={<Tooltip id='badgeMoreTooltip'>
+                        {`and ${nBadges - MAX_BADGES} more. Click to see all.`}
+                    </Tooltip>}
                 >
                     <button
                         id='showMoreButton'
