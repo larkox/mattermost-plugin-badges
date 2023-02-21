@@ -6,8 +6,8 @@
   }
 
   #showMoreButton {
-    background-color: rgb(255, 255, 255);
-    color: rgba(63, 67, 80, 0.56);
+    background-color: var(--center-channel-bg);
+    color: rgba(var(--center-channel-color), 0.56);
     border: 0;
     border-radius: 4px;
     font-weight: 600;
@@ -18,8 +18,8 @@
     padding: 0;
 
     &:hover {
-      background: rgba(63, 67, 80, 0.08);
-      color: rgba(63, 67, 80, 0.72);
+      background: rgba(var(--center-channel-color), 0.08);
+      color: rgba(var(--center-channel-color), 0.72);
     }
   }
 
@@ -27,8 +27,8 @@
     margin-top: 4px;
     padding-left: 0;
     border: 0;
-    background-color: rgb(255, 255, 255);
-    color: rgb(28, 88, 217);
+    background-color: var(--center-channel-bg);
+    color: var(--button-bg);
     font-size: 12px;
     font-weight: 600;
     gap: 6px;
