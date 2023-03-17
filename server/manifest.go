@@ -17,9 +17,9 @@ const manifestStr = `
   "description": "This plugin add badges support to Mattermost.",
   "homepage_url": "https://github.com/larkox/mattermost-plugin-badges",
   "support_url": "https://github.com/larkox/mattermost-plugin-badges/issues",
-  "release_notes_url": "https://github.com/larkox/mattermost-plugin-badges/releases/tag/v0.2.0",
+  "release_notes_url": "https://github.com/larkox/mattermost-plugin-badges/releases/tag/v0.2.1",
   "icon_path": "assets/starter-template-icon.svg",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "min_server_version": "5.12.0",
   "server": {
     "executables": {
