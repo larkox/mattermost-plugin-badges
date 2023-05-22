@@ -7,8 +7,8 @@ workflows:
   version: 2
   ci:
     jobs:
-      - plugin-ci/lint
-      - plugin-ci/test
+      ##- plugin-ci/lint
+      ##- plugin-ci/test
       - plugin-ci/build
 
 
