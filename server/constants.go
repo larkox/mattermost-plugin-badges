@@ -20,6 +20,7 @@ const (
 	DialogPathGrant              = "/grant"
 	DialogPathSelectBadge        = "/selectBadge"
 	DialogPathEditBadge          = "/editBadge"
+	DialogPathUngrant            = "/ungrant"
 	DialogPathCreateSubscription = "/createSubscription"
 	DialogPathDeleteSubscription = "/deleteSubscription"
 

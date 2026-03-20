@@ -82,6 +82,20 @@ class UserBadges extends React.PureComponent<Props, State> {
         this.props.actions.setRHSView(RHS_STATE_DETAIL);
     }
 
+    onRemoveBadge = (badge: UserBadge) => {
+        if (!this.props.user) {
+            return;
+        }
+        const c = new Client();
+        c.ungrantBadge(badge.id, this.props.user.id).then((success) => {
+            if (success && this.props.user) {
+                c.getUserBadges(this.props.user.id).then((badges) => {
+                    this.setState({badges});
+                });
+            }
+        });
+    }
+
     render() {
         if (!this.props.user) {
             return (<div>{'User not found.'}</div>);
@@ -102,6 +116,7 @@ class UserBadges extends React.PureComponent<Props, State> {
                     key={badge.time}
                     badge={badge}
                     onClick={this.onBadgeClick}
+                    onRemove={this.props.isCurrentUser ? this.onRemoveBadge : undefined}
                 />
             );
         });

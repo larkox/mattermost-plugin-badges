@@ -29,6 +29,7 @@ export type BadgeDetails = Badge & {
     owners: OwnershipList;
     created_by_username: string;
     type_name: string;
+    can_ungrant: boolean;
 }
 export type AllBadgesBadge = Badge & {
     granted: number;

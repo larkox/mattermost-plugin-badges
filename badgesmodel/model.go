@@ -40,6 +40,7 @@ type BadgeDetails struct {
 	Owners            []Ownership `json:"owners"`
 	CreatedByUsername string      `json:"created_by_username"`
 	TypeName          string      `json:"type_name"`
+	CanUngrant        bool        `json:"can_ungrant"`
 }
 
 type AllBadgesBadge struct {

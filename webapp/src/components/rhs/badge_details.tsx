@@ -74,6 +74,20 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
         });
     }
 
+    onRemoveUser = (userID: string) => {
+        if (!this.state.badge) {
+            return;
+        }
+        const c = new Client();
+        c.ungrantBadge(this.state.badge.id, userID).then((success) => {
+            if (success && this.props.badgeID) {
+                c.getBadgeDetails(this.props.badgeID).then((badge) => {
+                    this.setState({badge});
+                });
+            }
+        });
+    }
+
     onUserClick = (user: string) => {
         if (user === this.props.currentUserID) {
             this.props.actions.setRHSView(RHS_STATE_MY);
@@ -104,6 +118,7 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
                     key={ownership.time}
                     ownership={ownership}
                     onClick={this.onUserClick}
+                    onRemove={badge.can_ungrant ? this.onRemoveUser : undefined}
                 />
             );
         });

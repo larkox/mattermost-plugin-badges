@@ -61,6 +61,8 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		handler = p.runClean
 	case "grant":
 		handler = p.runGrant
+	case "ungrant":
+		handler = p.runUngrant
 	case "edit":
 		handler = p.runEdit
 	case "create":
@@ -669,6 +671,64 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 	return false, &model.CommandResponse{}, nil
 }
 
+func (p *Plugin) runUngrant(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
+	badgeStr := ""
+	username := ""
+	fs := pflag.NewFlagSet("", pflag.ContinueOnError)
+	fs.StringVar(&badgeStr, "badge", "", "ID of the badge")
+	fs.StringVar(&username, "user", "", "Username to remove badge from")
+	if err := fs.Parse(args); err != nil {
+		return commandError(err.Error())
+	}
+
+	if username == "" || badgeStr == "" {
+		return commandError("Both --user and --badge flags are required. Usage: /badges ungrant --user @username --badge badgeID")
+	}
+
+	if username[0] == '@' {
+		username = username[1:]
+	}
+
+	actingUser, err := p.mm.User.Get(extra.UserId)
+	if err != nil {
+		return commandError(err.Error())
+	}
+
+	badge, err := p.store.GetBadge(badgesmodel.BadgeID(badgeStr))
+	if err != nil {
+		return commandError(err.Error())
+	}
+
+	targetUser, err := p.mm.User.GetByUsername(username)
+	if err != nil {
+		return commandError(err.Error())
+	}
+
+	// Self-remove or granter-ungrant
+	if actingUser.Id != targetUser.Id {
+		badgeType, err := p.store.GetType(badge.Type)
+		if err != nil {
+			return commandError(err.Error())
+		}
+
+		if !canGrantBadge(actingUser, p.badgeAdminUserID, badge, badgeType) {
+			return commandError("you have no permissions to remove this badge")
+		}
+	}
+
+	err = p.store.UngrantBadge(badgesmodel.BadgeID(badgeStr), targetUser.Id)
+	if err != nil {
+		return commandError(err.Error())
+	}
+
+	if actingUser.Id != targetUser.Id {
+		p.notifyUngrant(badgesmodel.BadgeID(badgeStr), extra.UserId, targetUser)
+	}
+
+	p.postCommandResponse(extra, fmt.Sprintf("Badge `%s` removed from @%s.", badge.Name, targetUser.Username))
+	return false, &model.CommandResponse{}, nil
+}
+
 func (p *Plugin) runSubscription(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
 	lengthOfArgs := len(args)
 	restOfArgs := []string{}
@@ -822,6 +882,11 @@ func (p *Plugin) getAutocompleteData() *model.AutocompleteData {
 	grant.AddNamedDynamicListArgument("badge", "--badge badgeID", getAutocompletePath(AutocompletePathBadgeSuggestions), true)
 	grant.AddNamedTextArgument("user", "User to grant the badge to", "--user @username", "", true)
 	badges.AddCommand(grant)
+
+	ungrant := model.NewAutocompleteData("ungrant", "--user @username --badge id", "Remove a badge from a user")
+	ungrant.AddNamedDynamicListArgument("badge", "--badge badgeID", getAutocompletePath(AutocompletePathBadgeSuggestions), true)
+	ungrant.AddNamedTextArgument("user", "User to remove the badge from", "--user @username", "", true)
+	badges.AddCommand(ungrant)
 
 	create := model.NewAutocompleteData("create", "badge | type", "Create a badge or a type")
 

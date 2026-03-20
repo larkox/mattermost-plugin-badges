@@ -39,6 +39,9 @@ type Store interface {
 	GetTypeSubscriptions(tID badgesmodel.BadgeType) ([]string, error)
 	GetChannelSubscriptions(cID string) ([]*badgesmodel.BadgeTypeDefinition, error)
 
+	// Ungrant
+	UngrantBadge(badgeID badgesmodel.BadgeID, userID string) error
+
 	// PAPI
 	EnsureBadges(badges []*badgesmodel.Badge, pluginID, botID string) ([]*badgesmodel.Badge, error)
 }
@@ -326,6 +329,15 @@ func (s *store) GrantBadge(id badgesmodel.BadgeID, userID string, grantedBy stri
 	}
 
 	return shouldNotify, nil
+}
+
+func (s *store) UngrantBadge(id badgesmodel.BadgeID, userID string) error {
+	_, err := s.getBadge(id)
+	if err != nil {
+		return err
+	}
+
+	return s.doAtomic(func() (bool, error) { return s.atomicRemoveOwnershipEntry(id, userID) })
 }
 
 func (s *store) GetUserBadges(userID string) ([]*badgesmodel.UserBadge, error) {
