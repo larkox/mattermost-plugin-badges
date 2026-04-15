@@ -4,14 +4,22 @@ run:
   timeout: 5m
   modules-download-mode: readonly
 
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes: github.com/mattermost/mattermost-starter-template
+
 linters:
   disable-all: true
   enable:
     - bodyclose
     - errcheck
     - gocritic
-    - gofmt
-    - goimports
     - gosec
     - gosimple
     - govet
@@ -24,10 +32,6 @@ linters:
     - unused
     - whitespace
   settings:
-    gofmt:
-      simplify: true
-    goimports:
-      local-prefixes: github.com/mattermost/mattermost-starter-template
     misspell:
       locale: US
 
