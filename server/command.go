@@ -770,7 +770,6 @@ func (p *Plugin) runCreateSubscription(args []string, extra *model.CommandArgs) 
 	}
 
 	if typeStr != "" {
-
 		err = p.store.AddSubscription(badgesmodel.BadgeType(typeStr), extra.ChannelId)
 		if err != nil {
 			return commandError(err.Error())

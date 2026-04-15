@@ -635,7 +635,7 @@ func (p *Plugin) ungrantBadge(w http.ResponseWriter, r *http.Request, actingUser
 
 		owned := false
 		for _, ub := range userBadges {
-			if ub.Badge.ID == req.BadgeID {
+			if ub.ID == req.BadgeID {
 				owned = true
 				break
 			}
@@ -825,7 +825,7 @@ func (p *Plugin) grantBadge(w http.ResponseWriter, r *http.Request, pluginID str
 		return
 	}
 
-	badge, err := p.store.GetBadge(badgesmodel.BadgeID(req.BadgeID))
+	badge, err := p.store.GetBadge(req.BadgeID)
 	if err != nil {
 		p.writeAPIError(w, &APIErrorResponse{
 			ID:         "cannot get badge",
@@ -870,7 +870,7 @@ func (p *Plugin) grantBadge(w http.ResponseWriter, r *http.Request, pluginID str
 		}
 	}
 
-	_, _ = w.Write([]byte(`{"sucess": true}`))
+	_, _ = w.Write([]byte(`{"success": true}`))
 }
 
 func (p *Plugin) ensureBadges(w http.ResponseWriter, r *http.Request, pluginID string) {

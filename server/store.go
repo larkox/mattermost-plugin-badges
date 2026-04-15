@@ -429,7 +429,7 @@ func (s *store) atomicDeleteType(tID badgesmodel.BadgeType) (bool, error) {
 }
 
 func (s *store) DeleteType(tID badgesmodel.BadgeType) error {
-	s.doAtomic(func() (bool, error) { return s.atomicDeleteType(tID) })
+	_ = s.doAtomic(func() (bool, error) { return s.atomicDeleteType(tID) })
 
 	bb, _, err := s.getAllBadges()
 	if err != nil {

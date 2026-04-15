@@ -123,14 +123,6 @@ func canCreateSubscription(user *model.User, badgeAdminID string, channelID stri
 	return user.IsSystemAdmin()
 }
 
-func dumpObject(o interface{}) {
-	b, err := json.MarshalIndent(o, "", "    ")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	fmt.Println(string(b))
-}
-
 func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, granted *model.User, inChannel bool, channelID string, reason string) {
 	b, errBadge := p.store.GetBadgeDetails(badgeID)
 	granterUser, errUser := p.mm.User.Get(granter)
