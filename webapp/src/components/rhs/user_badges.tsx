@@ -83,7 +83,7 @@ class UserBadges extends React.PureComponent<Props, State> {
             return;
         }
         const c = new Client();
-        c.ungrantBadge(badge.id, this.props.user.id).then((success) => {
+        c.ungrantBadge(badge.id, this.props.user.id, badge.time).then((success) => {
             if (success && this.props.user) {
                 c.getUserBadges(this.props.user.id).then((badges) => {
                     this.setState({badges});
