@@ -2,7 +2,7 @@ import React from 'react';
 
 import {systemEmojis} from 'mattermost-redux/actions/emojis';
 
-import {BadgeDetails, BadgeID} from '../../types/badges';
+import {BadgeDetails, BadgeID, Ownership} from '../../types/badges';
 import Client from '../../client/api';
 
 import {RHSState} from '../../types/general';
@@ -70,12 +70,12 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
         });
     }
 
-    onRemoveUser = (userID: string) => {
+    onRemoveUser = (ownership: Ownership) => {
         if (!this.state.badge) {
             return;
         }
         const c = new Client();
-        c.ungrantBadge(this.state.badge.id, userID).then((success) => {
+        c.ungrantBadge(this.state.badge.id, ownership.user, ownership.time).then((success) => {
             if (success && this.props.badgeID) {
                 c.getBadgeDetails(this.props.badgeID).then((badge) => {
                     this.setState({badge});

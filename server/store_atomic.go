@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/larkox/mattermost-plugin-badges/badgesmodel"
 )
@@ -78,15 +79,15 @@ func (s *store) atomicRemoveBadgeFromOwnership(bID badgesmodel.BadgeID) (bool, e
 	return s.compareAndSet(KVKeyOwnership, data, ownership)
 }
 
-func (s *store) atomicRemoveOwnershipEntry(badgeID badgesmodel.BadgeID, userID string) (bool, error) {
+func (s *store) atomicRemoveOwnershipEntry(badgeID badgesmodel.BadgeID, userID string, grantTime time.Time) (bool, error) {
 	ownership, data, err := s.getOwnershipList()
 	if err != nil {
 		return false, err
 	}
 
 	found := false
-	for i := len(ownership) - 1; i >= 0; i-- {
-		if ownership[i].Badge == badgeID && ownership[i].User == userID {
+	for i, o := range ownership {
+		if o.Badge == badgeID && o.User == userID && o.Time.Equal(grantTime) {
 			ownership = append(ownership[:i], ownership[i+1:]...)
 			found = true
 			break

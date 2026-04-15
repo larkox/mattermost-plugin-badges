@@ -40,6 +40,7 @@ const (
 	DialogFieldBadge                  = "badge"
 	DialogFieldNotifyHere             = "notify_here"
 	DialogFieldGrantReason            = "reason"
+	DialogFieldUngrantGrant           = "grant_time"
 
 	TrueString  = "true"
 	FalseString = "false"

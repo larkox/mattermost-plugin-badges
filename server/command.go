@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/larkox/mattermost-plugin-badges/badgesmodel"
 	commandparser "github.com/larkox/mattermost-plugin-badges/server/command_parser"
@@ -674,9 +675,13 @@ func (p *Plugin) runGrant(args []string, extra *model.CommandArgs) (bool, *model
 func (p *Plugin) runUngrant(args []string, extra *model.CommandArgs) (bool, *model.CommandResponse, error) {
 	badgeStr := ""
 	username := ""
+	dateStr := ""
+	reason := ""
 	fs := pflag.NewFlagSet("", pflag.ContinueOnError)
 	fs.StringVar(&badgeStr, "badge", "", "ID of the badge")
 	fs.StringVar(&username, "user", "", "Username to remove badge from")
+	fs.StringVar(&dateStr, "date", "", "Date of the grant to target (YYYY-MM-DD or RFC3339)")
+	fs.StringVar(&reason, "reason", "", "Reason of the grant to target")
 	if err := fs.Parse(args); err != nil {
 		return commandError(err.Error())
 	}
@@ -716,16 +721,98 @@ func (p *Plugin) runUngrant(args []string, extra *model.CommandArgs) (bool, *mod
 		}
 	}
 
-	err = p.store.UngrantBadge(badgesmodel.BadgeID(badgeStr), targetUser.Id)
+	// Get all grants for this badge+user
+	details, err := p.store.GetBadgeDetails(badgesmodel.BadgeID(badgeStr))
 	if err != nil {
 		return commandError(err.Error())
 	}
 
-	if actingUser.Id != targetUser.Id {
-		p.notifyUngrant(badgesmodel.BadgeID(badgeStr), extra.UserId, targetUser)
+	candidates := []badgesmodel.Ownership{}
+	for _, o := range details.Owners {
+		if o.User == targetUser.Id {
+			candidates = append(candidates, o)
+		}
 	}
 
-	p.postCommandResponse(extra, fmt.Sprintf("Badge `%s` removed from @%s.", badge.Name, targetUser.Username))
+	// Apply --date filter
+	if dateStr != "" {
+		filtered := []badgesmodel.Ownership{}
+		for _, o := range candidates {
+			// Try date-only match (YYYY-MM-DD)
+			if o.Time.Format("2006-01-02") == dateStr {
+				filtered = append(filtered, o)
+				continue
+			}
+			// Try exact RFC3339 match
+			t, parseErr := time.Parse(time.RFC3339Nano, dateStr)
+			if parseErr == nil && o.Time.Equal(t) {
+				filtered = append(filtered, o)
+			}
+		}
+		candidates = filtered
+	}
+
+	// Apply --reason filter
+	if reason != "" {
+		filtered := []badgesmodel.Ownership{}
+		for _, o := range candidates {
+			if o.Reason == reason {
+				filtered = append(filtered, o)
+			}
+		}
+		candidates = filtered
+	}
+
+	if len(candidates) == 0 {
+		return commandError("no grant found matching the given filters")
+	}
+
+	if len(candidates) == 1 {
+		if err := p.store.UngrantBadge(badgesmodel.BadgeID(badgeStr), targetUser.Id, candidates[0].Time); err != nil {
+			return commandError(err.Error())
+		}
+		if actingUser.Id != targetUser.Id {
+			p.notifyUngrant(badgesmodel.BadgeID(badgeStr), extra.UserId, targetUser)
+		}
+		p.postCommandResponse(extra, fmt.Sprintf("Badge `%s` removed from @%s.", badge.Name, targetUser.Username))
+		return false, &model.CommandResponse{}, nil
+	}
+
+	// Multiple matches: open selection dialog
+	options := []*model.PostActionOptions{}
+	for _, o := range candidates {
+		label := o.Time.Format("2006-01-02")
+		if o.Reason != "" {
+			label += " \u2014 " + o.Reason
+		}
+		options = append(options, &model.PostActionOptions{
+			Text:  label,
+			Value: o.Time.Format(time.RFC3339Nano),
+		})
+	}
+
+	state := badgeStr + "|" + targetUser.Id
+	if err := p.mm.Frontend.OpenInteractiveDialog(model.OpenDialogRequest{
+		TriggerId: extra.TriggerId,
+		URL:       p.getDialogURL() + DialogPathUngrant,
+		Dialog: model.Dialog{
+			Title:       "Select grant to remove",
+			SubmitLabel: "Remove",
+			State:       state,
+			Elements: []model.DialogElement{
+				{
+					DisplayName: "Grant",
+					Type:        "select",
+					Name:        DialogFieldUngrantGrant,
+					Options:     options,
+					HelpText:    "Select the specific grant to remove",
+				},
+			},
+		},
+	}); err != nil {
+		return commandError(err.Error())
+	}
+
 	return false, &model.CommandResponse{}, nil
 }
 
@@ -885,6 +972,8 @@ func (p *Plugin) getAutocompleteData() *model.AutocompleteData {
 	ungrant := model.NewAutocompleteData("ungrant", "--user @username --badge id", "Remove a badge from a user")
 	ungrant.AddNamedDynamicListArgument("badge", "--badge badgeID", getAutocompletePath(AutocompletePathBadgeSuggestions), true)
 	ungrant.AddNamedTextArgument("user", "User to remove the badge from", "--user @username", "", true)
+	ungrant.AddNamedTextArgument("date", "Date of grant to target (YYYY-MM-DD)", "--date date", "", false)
+	ungrant.AddNamedTextArgument("reason", "Reason of grant to target", "--reason text", "", false)
 	badges.AddCommand(ungrant)
 
 	create := model.NewAutocompleteData("create", "badge | type", "Create a badge or a type")

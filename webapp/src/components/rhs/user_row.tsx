@@ -11,7 +11,7 @@ import './user_row.scss';
 type Props = {
     ownership: Ownership;
     onClick: (user: string) => void;
-    onRemove?: (userID: string) => void;
+    onRemove?: (ownership: Ownership) => void;
 }
 
 const UserBadgeRow: React.FC<Props> = ({ownership, onClick, onRemove}: Props) => {
@@ -33,9 +33,12 @@ const UserBadgeRow: React.FC<Props> = ({ownership, onClick, onRemove}: Props) =>
             <div className='badge-user-username'><a onClick={() => onClick(ownership.user)}>{`@${user.username}`}</a></div>
             <div className='badge-user-granted-by'>{`Granted by: ${grantedByName}`}</div>
             <div className='badge-user-granted-at'>{`Granted at: ${time.toDateString()}`}</div>
+            {ownership.reason && (
+                <div className='badge-user-reason'>{`Reason: ${ownership.reason}`}</div>
+            )}
             {onRemove && (
                 <div className='badge-user-remove'>
-                    <a onClick={() => onRemove(ownership.user)}>
+                    <a onClick={() => onRemove(ownership)}>
                         {'Remove'}
                     </a>
                 </div>

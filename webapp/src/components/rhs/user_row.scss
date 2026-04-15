@@ -10,4 +10,15 @@
     .badge-user-granted-at {
         font-size: 10px;
     }
+    .badge-user-reason {
+        font-style: italic;
+        font-size: 11px;
+    }
+    .badge-user-remove {
+        font-size: 12px;
+        a {
+            color: var(--error-text);
+            cursor: pointer;
+        }
+    }
 }

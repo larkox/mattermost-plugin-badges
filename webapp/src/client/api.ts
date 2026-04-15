@@ -41,9 +41,9 @@ export default class Client {
         }
     }
 
-    async ungrantBadge(badgeID: BadgeID, userID: string): Promise<boolean> {
+    async ungrantBadge(badgeID: BadgeID, userID: string, grantTime: string): Promise<boolean> {
         try {
-            await this.doPost(`${this.url}/ungrantBadge`, {badge_id: badgeID, user_id: userID});
+            await this.doPost(`${this.url}/ungrantBadge`, {badge_id: badgeID, user_id: userID, grant_time: grantTime});
             return true;
         } catch {
             return false;

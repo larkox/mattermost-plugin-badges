@@ -14,7 +14,7 @@ export type Ownership = {
     granted_by: string;
     badge: BadgeID;
     reason: string;
-    time: number;
+    time: string; // RFC3339 string from Go's time.Time
 }
 
 export type BadgeID = number;
