@@ -7,7 +7,7 @@
     "debug:watch": "webpack --mode=development --watch",
     "lint": "eslint --ignore-pattern node_modules --ignore-pattern dist --ext .js --ext .jsx --ext tsx --ext ts . --quiet --cache",
     "fix": "eslint --ignore-pattern node_modules --ignore-pattern dist --ext .js --ext .jsx --ext tsx --ext ts . --quiet --fix --cache",
-    "test": "jest --forceExit --detectOpenHandles --verbose",
+    "test": "jest --forceExit --detectOpenHandles --verbose --passWithNoTests",
     "test:watch": "jest --watch",
     "test-ci": "jest --forceExit --detectOpenHandles --maxWorkers=2",
     "check-types": "tsc"
