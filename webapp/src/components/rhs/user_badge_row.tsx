@@ -40,13 +40,7 @@ const UserBadgeRow: React.FC<Props> = ({badge, onClick, isCurrentUser, onRemove}
     if (isCurrentUser && onRemove) {
         removeBadge = (
             <div className='user-badge-remove'>
-                <a
-                    onClick={() => {
-                        if (window.confirm(`Are you sure you want to remove the "${badge.name}" badge?`)) {
-                            onRemove(badge);
-                        }
-                    }}
-                >
+                <a onClick={() => onRemove(badge)}>
                     {'Remove badge'}
                 </a>
             </div>

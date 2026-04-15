@@ -65,10 +65,6 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
         }
 
         const c = new Client();
-        if (!this.state.loading) {
-            this.setState({loading: true});
-        }
-
         c.getBadgeDetails(this.props.badgeID).then((badge) => {
             this.setState({badge, loading: false});
         });
@@ -118,7 +114,7 @@ class BadgeDetailsComponent extends React.PureComponent<Props, State> {
                     key={ownership.time}
                     ownership={ownership}
                     onClick={this.onUserClick}
-                    onRemove={badge.can_ungrant ? this.onRemoveUser : undefined}
+                    {...(badge.can_ungrant && {onRemove: this.onRemoveUser})}
                 />
             );
         });

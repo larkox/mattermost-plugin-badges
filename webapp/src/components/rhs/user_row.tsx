@@ -35,13 +35,7 @@ const UserBadgeRow: React.FC<Props> = ({ownership, onClick, onRemove}: Props) =>
             <div className='badge-user-granted-at'>{`Granted at: ${time.toDateString()}`}</div>
             {onRemove && (
                 <div className='badge-user-remove'>
-                    <a
-                        onClick={() => {
-                            if (window.confirm(`Are you sure you want to remove this badge from @${user.username}?`)) {
-                                onRemove(ownership.user);
-                            }
-                        }}
-                    >
+                    <a onClick={() => onRemove(ownership.user)}>
                         {'Remove'}
                     </a>
                 </div>
