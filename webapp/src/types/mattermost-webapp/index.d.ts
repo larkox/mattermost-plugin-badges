@@ -11,7 +11,7 @@ export interface PluginRegistry {
     registerChannelHeaderButtonAction(icon: React.ReactNode, action: () => void, dropdownText: string, tooltip: string);
     registerMainMenuAction(text: React.ReactNode, action: () => void, mobileIcon: React.ReactNode);
     registerChannelHeaderMenuAction(text: string, action: (channelID: string) => void);
-    registerAppBarComponent(iconURL: string, action: (channel: Channel, member: ChannelMembership) => void, tooltipText: React.ReactNode)
+    registerAppBarComponent(iconURL: string, action: (channel: Channel, member: ChannelMembership) => void, tooltipText: React.ReactNode);
 
     // Add more if needed from https://developers.mattermost.com/extend/plugins/webapp/reference
 }

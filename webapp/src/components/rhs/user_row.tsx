@@ -11,9 +11,10 @@ import './user_row.scss';
 type Props = {
     ownership: Ownership;
     onClick: (user: string) => void;
+    onRemove?: (ownership: Ownership) => void;
 }
 
-const UserBadgeRow: React.FC<Props> = ({ownership, onClick}: Props) => {
+const UserBadgeRow: React.FC<Props> = ({ownership, onClick, onRemove}: Props) => {
     const user = useSelector<GlobalState, UserProfile>((state) => getUser(state, ownership.user));
     const grantedBy = useSelector<GlobalState, UserProfile>((state) => getUser(state, ownership.granted_by));
 
@@ -32,6 +33,16 @@ const UserBadgeRow: React.FC<Props> = ({ownership, onClick}: Props) => {
             <div className='badge-user-username'><a onClick={() => onClick(ownership.user)}>{`@${user.username}`}</a></div>
             <div className='badge-user-granted-by'>{`Granted by: ${grantedByName}`}</div>
             <div className='badge-user-granted-at'>{`Granted at: ${time.toDateString()}`}</div>
+            {ownership.reason && (
+                <div className='badge-user-reason'>{`Reason: ${ownership.reason}`}</div>
+            )}
+            {onRemove && (
+                <div className='badge-user-remove'>
+                    <a onClick={() => onRemove(ownership)}>
+                        {'Remove'}
+                    </a>
+                </div>
+            )}
         </div>
     );
 };

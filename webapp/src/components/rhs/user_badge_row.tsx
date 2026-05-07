@@ -12,9 +12,10 @@ type Props = {
     badge: UserBadge;
     isCurrentUser: boolean;
     onClick: (badge: UserBadge) => void;
+    onRemove?: (badge: UserBadge) => void;
 }
 
-const UserBadgeRow: React.FC<Props> = ({badge, onClick, isCurrentUser}: Props) => {
+const UserBadgeRow: React.FC<Props> = ({badge, onClick, isCurrentUser, onRemove}: Props) => {
     const time = new Date(badge.time);
     let reason = null;
     if (badge.reason) {
@@ -31,6 +32,16 @@ const UserBadgeRow: React.FC<Props> = ({badge, onClick, isCurrentUser}: Props) =
                     }}
                 >
                     {'Set status to this badge'}
+                </a>
+            </div>
+        );
+    }
+    let removeBadge = null;
+    if (isCurrentUser && onRemove) {
+        removeBadge = (
+            <div className='user-badge-remove'>
+                <a onClick={() => onRemove(badge)}>
+                    {'Remove badge'}
                 </a>
             </div>
         );
@@ -53,6 +64,7 @@ const UserBadgeRow: React.FC<Props> = ({badge, onClick, isCurrentUser}: Props) =
                 <div className='user-badge-granted-by'>{`Granted by: ${badge.granted_by_name}`}</div>
                 <div className='user-badge-granted-at'>{`Granted at: ${time.toDateString()}`}</div>
                 {setStatus}
+                {removeBadge}
             </div>
         </div>
     );

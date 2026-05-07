@@ -68,10 +68,6 @@ class UserBadges extends React.PureComponent<Props, State> {
         }
 
         const c = new Client();
-        if (!this.state.loading) {
-            this.setState({loading: true});
-        }
-
         c.getUserBadges(this.props.user.id).then((badges) => {
             this.setState({badges, loading: false});
         });
@@ -80,6 +76,20 @@ class UserBadges extends React.PureComponent<Props, State> {
     onBadgeClick = (badge: UserBadge) => {
         this.props.actions.setRHSBadge(badge.id);
         this.props.actions.setRHSView(RHS_STATE_DETAIL);
+    }
+
+    onRemoveBadge = (badge: UserBadge) => {
+        if (!this.props.user) {
+            return;
+        }
+        const c = new Client();
+        c.ungrantBadge(badge.id, this.props.user.id, badge.time).then((success) => {
+            if (success && this.props.user) {
+                c.getUserBadges(this.props.user.id).then((badges) => {
+                    this.setState({badges});
+                });
+            }
+        });
     }
 
     render() {
@@ -102,6 +112,7 @@ class UserBadges extends React.PureComponent<Props, State> {
                     key={badge.time}
                     badge={badge}
                     onClick={this.onBadgeClick}
+                    {...(this.props.isCurrentUser && {onRemove: this.onRemoveBadge})}
                 />
             );
         });

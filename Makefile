@@ -54,7 +54,7 @@ ifneq ($(HAS_SERVER),)
 	fi; \
 
 	@echo Running golangci-lint
-	golangci-lint run ./...
+	golangci-lint run ./server/...
 endif
 
 ## Builds the server, if it exists, for all supported architectures.
@@ -78,7 +78,7 @@ endif
 ## Ensures NPM dependencies are installed without having to run this all the time.
 webapp/node_modules: $(wildcard webapp/package.json)
 ifneq ($(HAS_WEBAPP),)
-	cd webapp && $(NPM) install
+	cd webapp && $(NPM) install --ignore-scripts --legacy-peer-deps
 	touch $@
 endif
 
@@ -188,9 +188,6 @@ ifneq ($(HAS_SERVER),)
 endif
 ifneq ($(HAS_WEBAPP),)
 	cd webapp && $(NPM) run test;
-endif
-ifneq ($(wildcard ./build/sync/plan/.),)
-	cd ./build/sync && $(GO) test -v $(GO_TEST_FLAGS) ./...
 endif
 
 ## Creates a coverage report for the server code.

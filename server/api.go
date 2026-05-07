@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/larkox/mattermost-plugin-badges/badgesmodel"
@@ -45,6 +46,7 @@ func (p *Plugin) initializeAPI() {
 	apiRouter.HandleFunc("/getUserBadges/{userID}", p.extractUserMiddleWare(p.getUserBadges, ResponseTypeJSON)).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/getBadgeDetails/{badgeID}", p.extractUserMiddleWare(p.getBadgeDetails, ResponseTypeJSON)).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/getAllBadges", p.extractUserMiddleWare(p.getAllBadges, ResponseTypeJSON)).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/ungrantBadge", p.extractUserMiddleWare(p.ungrantBadge, ResponseTypeJSON)).Methods(http.MethodPost)
 
 	pluginAPIRouter.HandleFunc(badgesmodel.PluginAPIPathEnsure, checkPluginRequest(p.ensureBadges)).Methods(http.MethodPost)
 	pluginAPIRouter.HandleFunc(badgesmodel.PluginAPIPathGrant, checkPluginRequest(p.grantBadge)).Methods(http.MethodPost)
@@ -63,6 +65,7 @@ func (p *Plugin) initializeAPI() {
 	dialogRouter.HandleFunc(DialogPathEditType, p.extractUserMiddleWare(p.dialogEditType, ResponseTypeDialog)).Methods(http.MethodPost)
 	dialogRouter.HandleFunc(DialogPathCreateSubscription, p.extractUserMiddleWare(p.dialogCreateSubscription, ResponseTypeDialog)).Methods(http.MethodPost)
 	dialogRouter.HandleFunc(DialogPathDeleteSubscription, p.extractUserMiddleWare(p.dialogDeleteSubscription, ResponseTypeDialog)).Methods(http.MethodPost)
+	dialogRouter.HandleFunc(DialogPathUngrant, p.extractUserMiddleWare(p.dialogUngrant, ResponseTypeDialog)).Methods(http.MethodPost)
 
 	p.router.PathPrefix("/").HandlerFunc(p.defaultHandler)
 }
@@ -593,6 +596,178 @@ func (p *Plugin) dialogGrant(w http.ResponseWriter, r *http.Request, userID stri
 	dialogOK(w)
 }
 
+type ungrantRequest struct {
+	BadgeID   badgesmodel.BadgeID `json:"badge_id"`
+	UserID    string              `json:"user_id"`
+	GrantTime time.Time           `json:"grant_time"`
+}
+
+func (p *Plugin) ungrantBadge(w http.ResponseWriter, r *http.Request, actingUserID string) {
+	var req ungrantRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		p.writeAPIError(w, &APIErrorResponse{
+			ID:         "cannot unmarshal request",
+			Message:    err.Error(),
+			StatusCode: http.StatusBadRequest,
+		})
+		return
+	}
+
+	badge, err := p.store.GetBadge(req.BadgeID)
+	if err != nil {
+		p.writeAPIError(w, &APIErrorResponse{
+			ID:         "badge not found",
+			Message:    err.Error(),
+			StatusCode: http.StatusNotFound,
+		})
+		return
+	}
+
+	if actingUserID == req.UserID {
+		// Self-remove: verify the user actually owns this badge
+		userBadges, err := p.store.GetUserBadges(actingUserID)
+		if err != nil {
+			p.writeAPIError(w, &APIErrorResponse{
+				ID:         "cannot get user badges",
+				Message:    err.Error(),
+				StatusCode: http.StatusInternalServerError,
+			})
+			return
+		}
+
+		owned := false
+		for _, ub := range userBadges {
+			if ub.ID == req.BadgeID && ub.Time.Equal(req.GrantTime) {
+				owned = true
+				break
+			}
+		}
+
+		if !owned {
+			p.writeAPIError(w, &APIErrorResponse{
+				ID:         "badge not owned",
+				Message:    "you do not own this badge",
+				StatusCode: http.StatusBadRequest,
+			})
+			return
+		}
+	} else {
+		// Granter ungrant: check grant permissions
+		actingUser, err := p.mm.User.Get(actingUserID)
+		if err != nil {
+			p.writeAPIError(w, &APIErrorResponse{
+				ID:         "cannot get user",
+				Message:    err.Error(),
+				StatusCode: http.StatusInternalServerError,
+			})
+			return
+		}
+
+		badgeType, err := p.store.GetType(badge.Type)
+		if err != nil {
+			p.writeAPIError(w, &APIErrorResponse{
+				ID:         "cannot get type",
+				Message:    err.Error(),
+				StatusCode: http.StatusInternalServerError,
+			})
+			return
+		}
+
+		if !canGrantBadge(actingUser, p.badgeAdminUserID, badge, badgeType) {
+			p.writeAPIError(w, &APIErrorResponse{
+				ID:         "no permission",
+				Message:    "you have no permissions to remove this badge",
+				StatusCode: http.StatusForbidden,
+			})
+			return
+		}
+	}
+
+	err = p.store.UngrantBadge(req.BadgeID, req.UserID, req.GrantTime)
+	if err != nil {
+		p.writeAPIError(w, &APIErrorResponse{
+			ID:         "cannot ungrant badge",
+			Message:    err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		})
+		return
+	}
+
+	// Notify the user if someone else removed their badge
+	if actingUserID != req.UserID {
+		revokedUser, err := p.mm.User.Get(req.UserID)
+		if err == nil {
+			p.notifyUngrant(req.BadgeID, actingUserID, revokedUser)
+		}
+	}
+
+	_, _ = w.Write([]byte(`{"success": true}`))
+}
+
+func (p *Plugin) dialogUngrant(w http.ResponseWriter, r *http.Request, userID string) {
+	req := model.SubmitDialogRequestFromJson(r.Body)
+	if req == nil {
+		dialogError(w, "could not get the dialog request", nil)
+		return
+	}
+
+	// State = "badgeID|targetUserID"
+	parts := strings.SplitN(req.State, "|", 2)
+	if len(parts) != 2 {
+		dialogError(w, "invalid state", nil)
+		return
+	}
+	badgeIDStr, targetUserID := parts[0], parts[1]
+
+	grantTimeStr, errText, fieldErrors := getDialogSubmissionTextField(req, DialogFieldUngrantGrant)
+	if fieldErrors != nil {
+		dialogError(w, errText, nil)
+		return
+	}
+
+	grantTime, err := time.Parse(time.RFC3339Nano, grantTimeStr)
+	if err != nil {
+		dialogError(w, "invalid grant time: "+err.Error(), nil)
+		return
+	}
+
+	actingUser, err := p.mm.User.Get(userID)
+	if err != nil {
+		dialogError(w, "cannot get user", nil)
+		return
+	}
+
+	badge, err := p.store.GetBadge(badgesmodel.BadgeID(badgeIDStr))
+	if err != nil {
+		dialogError(w, "badge not found", nil)
+		return
+	}
+
+	badgeType, err := p.store.GetType(badge.Type)
+	if err != nil {
+		dialogError(w, "badge type not found", nil)
+		return
+	}
+
+	if !canGrantBadge(actingUser, p.badgeAdminUserID, badge, badgeType) {
+		dialogError(w, "you have no permissions to remove this badge", nil)
+		return
+	}
+
+	if err := p.store.UngrantBadge(badgesmodel.BadgeID(badgeIDStr), targetUserID, grantTime); err != nil {
+		dialogError(w, err.Error(), nil)
+		return
+	}
+
+	targetUser, _ := p.mm.User.Get(targetUserID)
+	if targetUser != nil && userID != targetUserID {
+		p.notifyUngrant(badgesmodel.BadgeID(badgeIDStr), userID, targetUser)
+	}
+
+	dialogOK(w)
+}
+
 func (p *Plugin) dialogCreateSubscription(w http.ResponseWriter, r *http.Request, userID string) {
 	req := model.SubmitDialogRequestFromJson(r.Body)
 	if req == nil {
@@ -716,7 +891,7 @@ func (p *Plugin) grantBadge(w http.ResponseWriter, r *http.Request, pluginID str
 		return
 	}
 
-	badge, err := p.store.GetBadge(badgesmodel.BadgeID(req.BadgeID))
+	badge, err := p.store.GetBadge(req.BadgeID)
 	if err != nil {
 		p.writeAPIError(w, &APIErrorResponse{
 			ID:         "cannot get badge",
@@ -761,7 +936,7 @@ func (p *Plugin) grantBadge(w http.ResponseWriter, r *http.Request, pluginID str
 		}
 	}
 
-	_, _ = w.Write([]byte(`{"sucess": true}`))
+	_, _ = w.Write([]byte(`{"success": true}`))
 }
 
 func (p *Plugin) ensureBadges(w http.ResponseWriter, r *http.Request, pluginID string) {
@@ -947,6 +1122,16 @@ func (p *Plugin) getBadgeDetails(w http.ResponseWriter, r *http.Request, actingU
 	badge, err := p.store.GetBadgeDetails(badgeID)
 	if err != nil {
 		p.mm.Log.Debug("Cannot get badge details", "badgeID", badgeID, "error", err)
+	}
+
+	if badge != nil {
+		actingUser, userErr := p.mm.User.Get(actingUserID)
+		if userErr == nil {
+			badgeType, typeErr := p.store.GetType(badge.Type)
+			if typeErr == nil {
+				badge.CanUngrant = canGrantBadge(actingUser, p.badgeAdminUserID, &badge.Badge, badgeType)
+			}
+		}
 	}
 
 	b, _ := json.Marshal(badge)

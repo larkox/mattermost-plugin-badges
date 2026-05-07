@@ -20,6 +20,7 @@ const (
 	DialogPathGrant              = "/grant"
 	DialogPathSelectBadge        = "/selectBadge"
 	DialogPathEditBadge          = "/editBadge"
+	DialogPathUngrant            = "/ungrant"
 	DialogPathCreateSubscription = "/createSubscription"
 	DialogPathDeleteSubscription = "/deleteSubscription"
 
@@ -39,6 +40,7 @@ const (
 	DialogFieldBadge                  = "badge"
 	DialogFieldNotifyHere             = "notify_here"
 	DialogFieldGrantReason            = "reason"
+	DialogFieldUngrantGrant           = "grant_time"
 
 	TrueString  = "true"
 	FalseString = "false"

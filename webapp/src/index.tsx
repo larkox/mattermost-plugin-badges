@@ -35,7 +35,7 @@ export default class Plugin {
         const toggleRHS = () => {
             store.dispatch(setRHSView(RHS_STATE_ALL));
             store.dispatch(toggleRHSPlugin);
-        }
+        };
 
         registry.registerChannelHeaderButtonAction(
             <ChannelHeaderButton/>,

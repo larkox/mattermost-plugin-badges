@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/larkox/mattermost-plugin-badges/badgesmodel"
@@ -123,14 +122,6 @@ func canCreateSubscription(user *model.User, badgeAdminID string, channelID stri
 	return user.IsSystemAdmin()
 }
 
-func dumpObject(o interface{}) {
-	b, err := json.MarshalIndent(o, "", "    ")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	fmt.Println(string(b))
-}
-
 func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, granted *model.User, inChannel bool, channelID string, reason string) {
 	b, errBadge := p.store.GetBadgeDetails(badgeID)
 	granterUser, errUser := p.mm.User.Get(granter)
@@ -199,6 +190,39 @@ func (p *Plugin) notifyGrant(badgeID badgesmodel.BadgeID, granter string, grante
 					p.mm.Log.Debug("notify here error", "err", err)
 				}
 			}
+		}
+	}
+}
+
+func (p *Plugin) notifyUngrant(badgeID badgesmodel.BadgeID, revoker string, revokedUser *model.User) {
+	b, errBadge := p.store.GetBadgeDetails(badgeID)
+	revokerUser, errUser := p.mm.User.Get(revoker)
+	if errBadge != nil {
+		p.mm.Log.Debug("badge error", "err", errBadge)
+	}
+	if errUser != nil {
+		p.mm.Log.Debug("user error", "err", errUser)
+	}
+
+	if errBadge == nil && errUser == nil {
+		image := ""
+		switch b.ImageType {
+		case badgesmodel.ImageTypeEmoji:
+			image = fmt.Sprintf(":%s: ", b.Image)
+		case badgesmodel.ImageTypeAbsoluteURL:
+			image = fmt.Sprintf("![icon](%s) ", b.Image)
+		}
+
+		dmPost := &model.Post{}
+		dmText := fmt.Sprintf("@%s removed the %s`%s` badge from you.", revokerUser.Username, image, b.Name)
+		dmAttachment := model.SlackAttachment{
+			Title: fmt.Sprintf("%sbadge removed", image),
+			Text:  dmText,
+		}
+		model.ParseSlackAttachment(dmPost, []*model.SlackAttachment{&dmAttachment})
+		err := p.mm.Post.DM(p.BotUserID, revokedUser.Id, dmPost)
+		if err != nil {
+			p.mm.Log.Debug("dm error", "err", err)
 		}
 	}
 }
