@@ -638,7 +638,7 @@ func (p *Plugin) ungrantBadge(w http.ResponseWriter, r *http.Request, actingUser
 
 		owned := false
 		for _, ub := range userBadges {
-			if ub.ID == req.BadgeID {
+			if ub.ID == req.BadgeID && ub.Time.Equal(req.GrantTime) {
 				owned = true
 				break
 			}
